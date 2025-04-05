@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Video, Search, Download, Clock, CheckCircle } from 'lucide-react';
+import { Video as VideoIcon, Search, Download, Clock, CheckCircle } from 'lucide-react';
 import db, { VideoResource } from '@/data/database';
 
 const Videos = () => {
@@ -100,7 +100,7 @@ const Videos = () => {
                   <Card key={video.id} className="card-shadow">
                     <div className="relative">
                       <div className="bg-gray-200 h-40 w-full rounded-t-lg flex items-center justify-center">
-                        <Video className="h-12 w-12 text-gray-500" />
+                        <VideoIcon className="h-12 w-12 text-gray-500" />
                       </div>
                       <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
                         {formatDuration(video.duration)}
@@ -144,7 +144,7 @@ const Videos = () => {
                 ))
               ) : (
                 <div className="text-center py-8">
-                  <Video className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <VideoIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
                   <h3 className="font-medium text-gray-700">No videos found</h3>
                   <p className="text-gray-500 text-sm mt-1">
                     Try a different search term
@@ -161,7 +161,7 @@ const Videos = () => {
                   <Card key={video.id} className="card-shadow">
                     <div className="relative">
                       <div className="bg-gray-200 h-40 w-full rounded-t-lg flex items-center justify-center">
-                        <Video className="h-12 w-12 text-gray-500" />
+                        <VideoIcon className="h-12 w-12 text-gray-500" />
                       </div>
                       <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
                         {formatDuration(video.duration)}
