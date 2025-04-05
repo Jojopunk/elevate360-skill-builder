@@ -1,167 +1,175 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
-import MobileLayout from '@/components/layouts/MobileLayout';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { ArrowRight, Trophy, Calendar, BookOpen, CheckCircle2 } from 'lucide-react';
-import { seedDatabaseWithInitialData } from '@/data/database';
+import { ArrowRight, BookOpen, BarChart2, Video as VideoIcon, Award } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useChallenge } from '@/context/ChallengeContext';
+import MobileLayout from '@/components/layouts/MobileLayout';
+import db, { VideoResource, UserProgress, DailyChallenge } from '@/data/database';
 
 const Index = () => {
-  const { currentUser, isLoading } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { currentChallenge, markChallengeAsCompleted } = useChallenge();
+  const [featuredVideos, setFeaturedVideos] = useState<VideoResource[]>([]);
+  const [completedChallengesCount, setCompletedChallengesCount] = useState(0);
 
-  // Seed the database with initial data on first load
   useEffect(() => {
-    seedDatabaseWithInitialData();
-  }, []);
+    const loadFeaturedVideos = async () => {
+      try {
+        const videos = await db.videoResources.toArray();
+        setFeaturedVideos(videos.slice(0, 3));
+      } catch (error) {
+        console.error('Error loading featured videos:', error);
+      }
+    };
 
-  useEffect(() => {
-    if (!isLoading && !currentUser) {
-      navigate('/login');
+    const loadCompletedChallengesCount = async () => {
+      if (user) {
+        try {
+          const count = await db.userProgress
+            .where({ userId: user.id, completed: true })
+            .count();
+          setCompletedChallengesCount(count);
+        } catch (error) {
+          console.error('Error loading completed challenges count:', error);
+        }
+      }
+    };
+
+    loadFeaturedVideos();
+    loadCompletedChallengesCount();
+  }, [user]);
+
+  const handleCompleteChallenge = async () => {
+    if (currentChallenge && user) {
+      try {
+        await markChallengeAsCompleted(currentChallenge.id);
+        setCompletedChallengesCount(prevCount => prevCount + 1);
+      } catch (error) {
+        console.error('Error completing challenge:', error);
+      }
     }
-  }, [currentUser, isLoading, navigate]);
+  };
 
-  if (isLoading || !currentUser) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-navy mb-4">Elevate360</h1>
-          <p className="text-gray-600">Loading your personal development journey...</p>
-        </div>
+  const renderHeroSection = () => (
+    <section className="mb-6">
+      <div className="bg-navy text-white rounded-lg p-6">
+        <h2 className="text-2xl font-bold mb-2">
+          Welcome, {user?.fullName || 'Guest'}!
+        </h2>
+        <p className="text-gray-200">
+          Ready to elevate your skills? Let's get started!
+        </p>
       </div>
-    );
-  }
+    </section>
+  );
 
-  return (
-    <MobileLayout>
-      <div className="flex flex-col px-4 py-6 bg-white min-h-screen">
-        <header className="mb-6">
-          <h1 className="text-2xl font-bold text-navy">Welcome, {currentUser.fullName.split(' ')[0]}</h1>
-          <p className="text-gray-600">Let's enhance your skills today</p>
-        </header>
-
-        <Card className="mb-6 card-shadow">
-          <CardHeader className="bg-navy text-white rounded-t-lg">
-            <CardTitle>Daily Challenge</CardTitle>
-            <CardDescription className="text-gray-200">
-              Build your skills with daily scenarios
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="flex items-center">
-              <div className="bg-navy/10 p-3 rounded-full mr-4">
-                <BookOpen className="h-6 w-6 text-navy" />
-              </div>
-              <div>
-                <h3 className="font-medium">Today's Scenario</h3>
-                <p className="text-sm text-gray-600">
-                  Test your soft skills with a real-world scenario
-                </p>
-              </div>
+  const renderQuickActions = () => (
+    <section className="mb-6">
+      <h3 className="text-lg font-bold mb-3">Quick Actions</h3>
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="card-shadow">
+          <CardContent className="flex items-center space-x-4 p-4">
+            <BookOpen className="h-6 w-6 text-blue-500" />
+            <div>
+              <CardTitle className="text-sm font-semibold">Learn</CardTitle>
+              <Button variant="link" size="sm" onClick={() => navigate('/learn')}>
+                Start Learning <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button 
-              onClick={() => navigate('/learn')} 
-              className="bg-navy hover:bg-navy-dark"
-            >
-              Start Challenge <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </CardFooter>
-        </Card>
-
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <Card className="card-shadow">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-lg">Streak</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="flex items-center">
-                <Trophy className="h-8 w-8 text-yellow-500 mr-2" />
-                <span className="text-2xl font-bold">0</span>
-                <span className="ml-2 text-gray-600">days</span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="card-shadow">
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-lg">Completed</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="flex items-center">
-                <CheckCircle2 className="h-8 w-8 text-green-500 mr-2" />
-                <span className="text-2xl font-bold">0</span>
-                <span className="ml-2 text-gray-600">challenges</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="card-shadow mb-6">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-lg">Recent Progress</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="space-y-4">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">Communication</span>
-                <div className="progress-bar mt-1">
-                  <div className="progress-value" style={{ width: '35%' }}></div>
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">Leadership</span>
-                <div className="progress-bar mt-1">
-                  <div className="progress-value" style={{ width: '20%' }}></div>
-                </div>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-medium">Conflict Resolution</span>
-                <div className="progress-bar mt-1">
-                  <div className="progress-value" style={{ width: '45%' }}></div>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/progress')}
-              className="text-navy border-navy hover:bg-navy/10"
-            >
-              View Details
-            </Button>
-          </CardFooter>
         </Card>
 
         <Card className="card-shadow">
-          <CardHeader className="p-4 pb-2">
-            <CardTitle className="text-lg">Recommended Videos</CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="flex items-center">
-              <div className="bg-gray-200 rounded-md w-20 h-12 mr-3 flex items-center justify-center">
-                <Video className="h-6 w-6 text-gray-600" />
-              </div>
-              <div>
-                <h4 className="font-medium text-sm">Effective Communication</h4>
-                <p className="text-xs text-gray-600">18:25 • Communication</p>
-              </div>
+          <CardContent className="flex items-center space-x-4 p-4">
+            <BarChart2 className="h-6 w-6 text-green-500" />
+            <div>
+              <CardTitle className="text-sm font-semibold">Track Progress</CardTitle>
+              <Button variant="link" size="sm" onClick={() => navigate('/progress')}>
+                View Progress <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-end">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/videos')}
-              className="text-navy border-navy hover:bg-navy/10"
-            >
-              See All Videos
-            </Button>
-          </CardFooter>
         </Card>
+      </div>
+    </section>
+  );
+
+  const renderDailyChallenge = () => (
+    <Card className="mb-6 card-shadow">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-bold">Daily Challenge</CardTitle>
+          {completedChallengesCount > 0 && (
+            <div className="flex items-center space-x-2">
+              <Award className="h-5 w-5 text-yellow-500" />
+              <span className="text-sm text-gray-600">{completedChallengesCount} Completed</span>
+            </div>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {currentChallenge ? (
+          <>
+            <h4 className="font-medium text-sm">{currentChallenge.title}</h4>
+            <p className="text-xs text-gray-500 mb-3 line-clamp-3">{currentChallenge.scenario}</p>
+            <Button className="w-full" onClick={handleCompleteChallenge}>
+              Complete Challenge
+            </Button>
+          </>
+        ) : (
+          <p className="text-sm text-gray-500">No challenge available today. Check back tomorrow!</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const renderFeaturedVideos = () => (
+    <Card className="mb-6">
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-center">
+          <CardTitle className="text-lg font-bold">Featured Videos</CardTitle>
+          <Button 
+            variant="ghost" 
+            className="text-navy p-0 h-8" 
+            onClick={() => navigate('/videos')}
+          >
+            View All <ArrowRight className="h-4 w-4 ml-1" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {featuredVideos.map((video) => (
+            <div key={video.id} className="flex gap-3 items-center">
+              <div className="bg-gray-200 h-16 w-24 rounded-md flex items-center justify-center flex-shrink-0">
+                <VideoIcon className="h-6 w-6 text-gray-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-medium text-sm truncate">{video.title}</h4>
+                <p className="text-xs text-gray-500 truncate">{video.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  return (
+    <MobileLayout>
+      <div className="flex flex-col p-4 bg-white min-h-screen">
+        <header className="mb-4">
+          <h1 className="text-2xl font-bold text-navy">Dashboard</h1>
+          <p className="text-gray-600">Your skill development journey starts here</p>
+        </header>
+
+        {renderHeroSection()}
+        {renderQuickActions()}
+        {renderDailyChallenge()}
+        {renderFeaturedVideos()}
       </div>
     </MobileLayout>
   );
