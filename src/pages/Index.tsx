@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +11,8 @@ import db, { VideoResource, UserProgress, DailyChallenge } from '@/data/database
 
 const Index = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { currentChallenge, markChallengeAsCompleted } = useChallenge();
+  const { currentUser } = useAuth();
+  const { dailyChallenge, submitAnswer } = useChallenge();
   const [featuredVideos, setFeaturedVideos] = useState<VideoResource[]>([]);
   const [completedChallengesCount, setCompletedChallengesCount] = useState(0);
 
@@ -26,10 +27,10 @@ const Index = () => {
     };
 
     const loadCompletedChallengesCount = async () => {
-      if (user) {
+      if (currentUser) {
         try {
           const count = await db.userProgress
-            .where({ userId: user.id, completed: true })
+            .where({ userId: currentUser.id!, completed: true })
             .count();
           setCompletedChallengesCount(count);
         } catch (error) {
@@ -40,13 +41,16 @@ const Index = () => {
 
     loadFeaturedVideos();
     loadCompletedChallengesCount();
-  }, [user]);
+  }, [currentUser]);
 
   const handleCompleteChallenge = async () => {
-    if (currentChallenge && user) {
+    if (dailyChallenge && currentUser) {
       try {
-        await markChallengeAsCompleted(currentChallenge.id);
-        setCompletedChallengesCount(prevCount => prevCount + 1);
+        // Using the correct method from the challenge context
+        const result = await submitAnswer("completed");
+        if (result) {
+          setCompletedChallengesCount(prevCount => prevCount + 1);
+        }
       } catch (error) {
         console.error('Error completing challenge:', error);
       }
@@ -57,7 +61,7 @@ const Index = () => {
     <section className="mb-6">
       <div className="bg-navy text-white rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-2">
-          Welcome, {user?.fullName || 'Guest'}!
+          Welcome, {currentUser?.fullName || 'Guest'}!
         </h2>
         <p className="text-gray-200">
           Ready to elevate your skills? Let's get started!
@@ -111,10 +115,10 @@ const Index = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {currentChallenge ? (
+        {dailyChallenge ? (
           <>
-            <h4 className="font-medium text-sm">{currentChallenge.title}</h4>
-            <p className="text-xs text-gray-500 mb-3 line-clamp-3">{currentChallenge.scenario}</p>
+            <h4 className="font-medium text-sm">{dailyChallenge.title}</h4>
+            <p className="text-xs text-gray-500 mb-3 line-clamp-3">{dailyChallenge.scenario}</p>
             <Button className="w-full" onClick={handleCompleteChallenge}>
               Complete Challenge
             </Button>
