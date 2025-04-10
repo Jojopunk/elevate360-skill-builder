@@ -8,21 +8,34 @@ import { useAuth } from '@/context/AuthContext';
 import { useChallenge } from '@/context/ChallengeContext';
 import MobileLayout from '@/components/layouts/MobileLayout';
 import db, { VideoResource, UserProgress, DailyChallenge } from '@/data/database';
+import { useQuery } from '@tanstack/react-query';
+import { fetchSupabaseVideos, SupabaseVideo } from '@/services/videoService';
 
 const Index = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { dailyChallenge, submitAnswer } = useChallenge();
-  const [featuredVideos, setFeaturedVideos] = useState<VideoResource[]>([]);
   const [completedChallengesCount, setCompletedChallengesCount] = useState(0);
 
+  // Get featured videos from Supabase
+  const { data: supabaseVideos, isLoading } = useQuery({
+    queryKey: ['featuredVideos'],
+    queryFn: fetchSupabaseVideos
+  });
+
+  // Take only first 3 videos for featured section
+  const featuredVideos = supabaseVideos?.slice(0, 3);
+
+  // Fallback to local videos if Supabase fails
+  const [localVideos, setLocalVideos] = useState<VideoResource[]>([]);
+  
   useEffect(() => {
-    const loadFeaturedVideos = async () => {
+    const loadLocalVideos = async () => {
       try {
         const videos = await db.videoResources.toArray();
-        setFeaturedVideos(videos.slice(0, 3));
+        setLocalVideos(videos.slice(0, 3));
       } catch (error) {
-        console.error('Error loading featured videos:', error);
+        console.error('Error loading local videos:', error);
       }
     };
 
@@ -39,7 +52,7 @@ const Index = () => {
       }
     };
 
-    loadFeaturedVideos();
+    loadLocalVideos();
     loadCompletedChallengesCount();
   }, [currentUser]);
 
@@ -146,17 +159,39 @@ const Index = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {featuredVideos.map((video) => (
-            <div key={video.id} className="flex gap-3 items-center">
-              <div className="bg-gray-200 h-16 w-24 rounded-md flex items-center justify-center flex-shrink-0">
-                <VideoIcon className="h-6 w-6 text-gray-500" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="font-medium text-sm truncate">{video.title}</h4>
-                <p className="text-xs text-gray-500 truncate">{video.description}</p>
-              </div>
+          {isLoading ? (
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-500">Loading videos...</p>
             </div>
-          ))}
+          ) : featuredVideos && featuredVideos.length > 0 ? (
+            // Show Supabase videos if available
+            featuredVideos.map((video: SupabaseVideo) => (
+              <div key={video.id} className="flex gap-3 items-center">
+                <div className="bg-gray-200 h-16 w-24 rounded-md flex items-center justify-center flex-shrink-0">
+                  <VideoIcon className="h-6 w-6 text-gray-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm truncate">{video.title}</h4>
+                  <p className="text-xs text-gray-500 truncate">{video.description}</p>
+                </div>
+              </div>
+            ))
+          ) : localVideos.length > 0 ? (
+            // Fallback to local videos if Supabase fails
+            localVideos.map((video) => (
+              <div key={video.id} className="flex gap-3 items-center">
+                <div className="bg-gray-200 h-16 w-24 rounded-md flex items-center justify-center flex-shrink-0">
+                  <VideoIcon className="h-6 w-6 text-gray-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-sm truncate">{video.title}</h4>
+                  <p className="text-xs text-gray-500 truncate">{video.description}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-gray-500 text-center">No videos available</p>
+          )}
         </div>
       </CardContent>
     </Card>

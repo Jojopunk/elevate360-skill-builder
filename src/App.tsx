@@ -11,6 +11,7 @@ import Index from "./pages/Index";
 import Learn from "./pages/Learn";
 import Progress from "./pages/Progress";
 import Videos from "./pages/Videos";
+import VideoDetail from "./pages/VideoDetail";
 import Profile from "./pages/Profile";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/learn" element={<Learn />} />
               <Route path="/progress" element={<Progress />} />
               <Route path="/videos" element={<Videos />} />
+              <Route path="/videos/:id" element={<VideoDetail />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />

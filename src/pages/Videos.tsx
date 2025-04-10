@@ -6,50 +6,84 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Video as VideoIcon, Search, Download, Clock, CheckCircle } from 'lucide-react';
+import { Video as VideoIcon, Search, Download, Clock, CheckCircle, ExternalLink } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import db, { VideoResource } from '@/data/database';
+import { fetchSupabaseVideos, SupabaseVideo } from '@/services/videoService';
+import { useQuery } from '@tanstack/react-query';
 
 const Videos = () => {
-  const [videos, setVideos] = useState<VideoResource[]>([]);
+  const [localVideos, setLocalVideos] = useState<VideoResource[]>([]);
   const [downloadedVideos, setDownloadedVideos] = useState<VideoResource[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
+  // Fetch videos from Supabase
+  const { data: supabaseVideos, isLoading: isLoadingSupabase, error: supabaseError } = useQuery({
+    queryKey: ['videos'],
+    queryFn: fetchSupabaseVideos
+  });
+
+  // Fetch locally stored videos
   useEffect(() => {
-    const loadVideos = async () => {
+    const loadLocalVideos = async () => {
       try {
         const allVideos = await db.videoResources.toArray();
-        setVideos(allVideos);
+        setLocalVideos(allVideos);
         setDownloadedVideos(allVideos.filter(v => v.isDownloaded));
       } catch (error) {
-        console.error('Error loading videos:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error loading local videos:', error);
       }
     };
 
-    loadVideos();
+    loadLocalVideos();
   }, []);
 
-  const handleDownload = async (videoId: number) => {
+  const handleDownload = async (video: SupabaseVideo) => {
     try {
-      // Simulate downloading by marking as downloaded
-      await db.videoResources.update(videoId, {
-        isDownloaded: true,
-        // In a real app, you would also store the local file path
-        localFilePath: `/local/videos/${videoId}.mp4`
-      });
+      // First check if we already have this video in our local DB
+      const existingVideo = await db.videoResources
+        .where({ videoUrl: video.video_url })
+        .first();
+      
+      if (existingVideo) {
+        // Update existing record to mark as downloaded
+        await db.videoResources.update(existingVideo.id!, {
+          isDownloaded: true,
+          localFilePath: `/local/videos/${video.id}.mp4`
+        });
+      } else {
+        // Add new record to local DB
+        await db.videoResources.add({
+          title: video.title,
+          description: video.description,
+          videoUrl: video.video_url,
+          thumbnailUrl: video.thumbnail_url || '',
+          duration: video.duration,
+          skillCategory: video.skill_categories,
+          isDownloaded: true,
+          localFilePath: `/local/videos/${video.id}.mp4`,
+          createdAt: new Date(video.created_at)
+        });
+      }
       
       // Refresh the video lists
-      const updatedVideo = await db.videoResources.get(videoId);
-      if (updatedVideo) {
-        setVideos(prevVideos => 
-          prevVideos.map(v => v.id === videoId ? updatedVideo : v)
-        );
-        setDownloadedVideos(prevDownloaded => [...prevDownloaded, updatedVideo]);
-      }
+      const updatedLocalVideos = await db.videoResources.toArray();
+      setLocalVideos(updatedLocalVideos);
+      setDownloadedVideos(updatedLocalVideos.filter(v => v.isDownloaded));
+
+      toast({
+        title: "Video Downloaded",
+        description: `${video.title} is now available offline`,
+      });
+      
     } catch (error) {
       console.error('Error downloading video:', error);
+      toast({
+        title: "Download Failed",
+        description: "There was a problem downloading this video",
+        variant: "destructive"
+      });
     }
   };
 
@@ -59,10 +93,10 @@ const Videos = () => {
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
 
-  const filteredVideos = videos.filter(video => 
+  const filteredSupabaseVideos = supabaseVideos?.filter(video => 
     video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    video.skillCategory.some(cat => 
+    video.skill_categories.some(cat => 
       cat.toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
@@ -72,7 +106,7 @@ const Videos = () => {
       <div className="flex flex-col p-4 bg-white min-h-screen">
         <header className="mb-4">
           <h1 className="text-2xl font-bold text-navy">Skill Videos</h1>
-          <p className="text-gray-600">Learn from expert-curated content</p>
+          <p className="text-gray-600">Learn from expert-curated soft skill content</p>
         </header>
 
         <div className="relative mb-6">
@@ -93,10 +127,15 @@ const Videos = () => {
           
           <TabsContent value="all">
             <div className="space-y-4">
-              {isLoading ? (
+              {isLoadingSupabase ? (
                 <p className="text-center py-8 text-gray-600">Loading videos...</p>
-              ) : filteredVideos.length > 0 ? (
-                filteredVideos.map((video) => (
+              ) : supabaseError ? (
+                <div className="text-center py-8">
+                  <p className="text-red-500">Failed to load videos</p>
+                  <p className="text-sm text-gray-500 mt-2">Please check your connection and try again</p>
+                </div>
+              ) : filteredSupabaseVideos && filteredSupabaseVideos.length > 0 ? (
+                filteredSupabaseVideos.map((video) => (
                   <Card key={video.id} className="card-shadow">
                     <div className="relative">
                       <div className="bg-gray-200 h-40 w-full rounded-t-lg flex items-center justify-center">
@@ -114,31 +153,35 @@ const Videos = () => {
                         {video.description}
                       </p>
                       <div className="flex flex-wrap gap-2 mb-4">
-                        {video.skillCategory.map((category) => (
+                        {video.skill_categories.map((category) => (
                           <Badge key={category} variant="outline" className="capitalize">
                             {category.replace(/-/g, ' ')}
                           </Badge>
                         ))}
                       </div>
-                      <Button 
-                        variant={video.isDownloaded ? "secondary" : "default"}
-                        size="sm"
-                        className="w-full"
-                        disabled={video.isDownloaded}
-                        onClick={() => video.id && handleDownload(video.id)}
-                      >
-                        {video.isDownloaded ? (
-                          <>
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            Downloaded
-                          </>
-                        ) : (
-                          <>
-                            <Download className="h-4 w-4 mr-1" />
-                            Download for Offline
-                          </>
-                        )}
-                      </Button>
+                      
+                      {/* Check if video is already downloaded by matching URL */}
+                      {localVideos.some(lv => lv.videoUrl === video.video_url && lv.isDownloaded) ? (
+                        <Button 
+                          variant="secondary" 
+                          size="sm"
+                          className="w-full"
+                          disabled
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Downloaded
+                        </Button>
+                      ) : (
+                        <Button 
+                          variant="default"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => handleDownload(video)}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Download for Offline
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 ))
