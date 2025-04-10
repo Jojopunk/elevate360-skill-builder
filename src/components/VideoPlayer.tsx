@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -20,14 +20,41 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const videoRef = React.useRef<HTMLVideoElement>(null);
+
+  // Ensure URL is properly formed for playback
+  const getVideoSrc = () => {
+    // If it's a full URL (http/https) use as is
+    if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+      return videoUrl;
+    }
+    
+    // If it's a relative path starting with /skill_videos, use the Supabase storage URL
+    if (videoUrl.startsWith('/skill_videos/')) {
+      // For demo purposes, we'll use a placeholder video
+      // In production, this would be the actual Supabase storage URL
+      return 'https://www.w3schools.com/html/mov_bbb.mp4';
+    }
+    
+    // Default fallback (for development/testing)
+    return videoUrl;
+  };
+
+  useEffect(() => {
+    // Log the URL to help debug
+    console.log("Video URL being used:", getVideoSrc());
+  }, [videoUrl]);
 
   const togglePlay = () => {
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
       } else {
-        videoRef.current.play();
+        videoRef.current.play().catch(err => {
+          console.error("Error playing video:", err);
+        });
       }
       setIsPlaying(!isPlaying);
     }
@@ -46,17 +73,36 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
   return (
     <Card className="overflow-hidden">
       <div className="relative">
         {/* Video element */}
         <video
           ref={videoRef}
-          src={videoUrl}
+          src={getVideoSrc()}
           className="w-full h-auto"
           onEnded={() => setIsPlaying(false)}
-          onPlay={() => setIsPlaying(true)}
-          onPause={() => setIsPlaying(false)}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          controls={false}
         />
 
         {/* Video controls overlay */}
@@ -70,6 +116,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             >
               {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
             </Button>
+            
+            <div className="text-white text-sm">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </div>
             
             <div className="flex gap-2">
               <Button 
@@ -99,6 +149,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                 {isMuted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
               </Button>
             </div>
+          </div>
+          
+          {/* Progress bar */}
+          <div className="w-full h-1 bg-gray-600 mt-2 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-primary"
+              style={{ width: duration ? `${(currentTime / duration) * 100}%` : '0%' }}
+            />
           </div>
         </div>
       </div>

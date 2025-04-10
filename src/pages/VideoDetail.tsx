@@ -7,6 +7,7 @@ import VideoPlayer from '@/components/VideoPlayer';
 import { Button } from '@/components/ui/button';
 import { fetchSupabaseVideoById } from '@/services/videoService';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 import db from '@/data/database';
 
 const VideoDetail = () => {
@@ -15,11 +16,27 @@ const VideoDetail = () => {
   const [localVideo, setLocalVideo] = useState<any>(null);
 
   // First try to get the video from Supabase
-  const { data: supabaseVideo, isLoading: isLoadingSupabase } = useQuery({
+  const { data: supabaseVideo, isLoading: isLoadingSupabase, error } = useQuery({
     queryKey: ['video', id],
     queryFn: () => fetchSupabaseVideoById(id!),
     enabled: !!id
   });
+
+  // Log for debugging
+  useEffect(() => {
+    if (error) {
+      console.error("Error fetching video from Supabase:", error);
+      toast({
+        title: "Error loading video",
+        description: "Could not load the video from the server. Please try again.",
+        variant: "destructive"
+      });
+    }
+    
+    if (supabaseVideo) {
+      console.log("Supabase video loaded:", supabaseVideo);
+    }
+  }, [supabaseVideo, error]);
 
   // If not found in Supabase, try to get from local DB
   useEffect(() => {
@@ -32,6 +49,7 @@ const VideoDetail = () => {
         if (!isNaN(numId)) {
           const video = await db.videoResources.get(numId);
           if (video) {
+            console.log("Local video loaded:", video);
             setLocalVideo(video);
           }
         }

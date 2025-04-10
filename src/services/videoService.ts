@@ -43,6 +43,17 @@ export async function fetchSupabaseVideoById(id: string): Promise<SupabaseVideo 
   return data;
 }
 
+// Fix for the database videoUrl index error we saw in console logs
+export async function findVideoByUrl(videoUrl: string): Promise<VideoResource | undefined> {
+  try {
+    const videos = await db.videoResources.toArray();
+    return videos.find(v => v.videoUrl === videoUrl);
+  } catch (error) {
+    console.error("Error finding video by URL:", error);
+    return undefined;
+  }
+}
+
 // Convert a Supabase video to local database format (if needed)
 export function convertSupabaseVideoToLocal(video: SupabaseVideo): VideoResource {
   return {
