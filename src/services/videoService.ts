@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { VideoResource } from "@/data/database";
+import db from "@/data/database";
 
 export interface SupabaseVideo {
   id: string;
