@@ -55,10 +55,25 @@ export async function findVideoByUrl(videoUrl: string): Promise<VideoResource | 
   }
 }
 
-// Convert a Supabase video to local database format (if needed)
+// Update the Dexie database schema to properly index videoUrl
+export async function updateDexieSchema() {
+  try {
+    if (!db.videoResources.schema.primKey) {
+      console.log("Updating database schema to include videoUrl index");
+      await db.version(2).stores({
+        videoResources: '++id, videoUrl, skillCategory, isDownloaded'
+      });
+      console.log("Database schema updated successfully");
+    }
+  } catch (error) {
+    console.error("Error updating database schema:", error);
+  }
+}
+
+// Convert a Supabase video to local database format
 export function convertSupabaseVideoToLocal(video: SupabaseVideo): VideoResource {
   return {
-    id: parseInt(video.id, 10), // This might need adjustment based on your ID format
+    id: parseInt(video.id, 10) || Date.now(), // Fallback to timestamp if parsing fails
     title: video.title,
     description: video.description,
     videoUrl: video.video_url,

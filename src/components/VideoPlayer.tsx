@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Volume2, VolumeX, SkipForward, SkipBack } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -22,7 +23,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Ensure URL is properly formed for playback
   const getVideoSrc = () => {
@@ -31,15 +34,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       return videoUrl;
     }
     
-    // If it's a relative path starting with /skill_videos, use the Supabase storage URL
-    if (videoUrl.startsWith('/skill_videos/')) {
-      // For demo purposes, we'll use a placeholder video
-      // In production, this would be the actual Supabase storage URL
-      return 'https://www.w3schools.com/html/mov_bbb.mp4';
-    }
-    
-    // Default fallback (for development/testing)
-    return videoUrl;
+    // If it's a relative path starting with /skill_videos, use a demo video
+    // In production, this would be the actual Supabase storage URL
+    return 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
   };
 
   useEffect(() => {
@@ -54,6 +51,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       } else {
         videoRef.current.play().catch(err => {
           console.error("Error playing video:", err);
+          setError("Failed to play video. Please try again.");
         });
       }
       setIsPlaying(!isPlaying);
@@ -82,7 +80,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setDuration(videoRef.current.duration);
+      setIsLoading(false);
     }
+  };
+
+  const handleVideoError = () => {
+    console.error("Video failed to load:", getVideoSrc());
+    setError("Failed to load video. Please check your connection or try a different video.");
+    setIsLoading(false);
   };
 
   const formatTime = (time: number) => {
@@ -94,6 +99,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <Card className="overflow-hidden">
       <div className="relative">
+        {/* Loading indicator */}
+        {isLoading && (
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10">
+            <div className="text-white">Loading video...</div>
+          </div>
+        )}
+
+        {/* Error message */}
+        {error && (
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+            <div className="text-white text-center p-4">
+              <p className="mb-2">{error}</p>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setError(null);
+                  if (videoRef.current) {
+                    videoRef.current.load();
+                  }
+                }}
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Video element */}
         <video
           ref={videoRef}
@@ -102,6 +134,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           onEnded={() => setIsPlaying(false)}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
+          onError={handleVideoError}
           controls={false}
         />
 
@@ -152,12 +185,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
           
           {/* Progress bar */}
-          <div className="w-full h-1 bg-gray-600 mt-2 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary"
-              style={{ width: duration ? `${(currentTime / duration) * 100}%` : '0%' }}
-            />
-          </div>
+          <Progress
+            value={duration > 0 ? (currentTime / duration) * 100 : 0}
+            className="h-1 mt-2"
+          />
         </div>
       </div>
 

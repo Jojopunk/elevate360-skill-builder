@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import MobileLayout from '@/components/layouts/MobileLayout';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Button } from '@/components/ui/button';
-import { fetchSupabaseVideoById } from '@/services/videoService';
+import { fetchSupabaseVideoById, findVideoByUrl } from '@/services/videoService';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import db from '@/data/database';
@@ -28,7 +28,7 @@ const VideoDetail = () => {
       console.error("Error fetching video from Supabase:", error);
       toast({
         title: "Error loading video",
-        description: "Could not load the video from the server. Please try again.",
+        description: "Could not load the video from the server. Checking local storage...",
         variant: "destructive"
       });
     }
