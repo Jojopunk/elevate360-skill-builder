@@ -33,7 +33,7 @@ export async function fetchSupabaseVideoById(id: string): Promise<SupabaseVideo 
     .from('video_resources')
     .select('*')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error("Error fetching video by ID:", error);

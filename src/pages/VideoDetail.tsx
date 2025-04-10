@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import MobileLayout from '@/components/layouts/MobileLayout';
 import VideoPlayer from '@/components/VideoPlayer';
-import { Button } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { fetchSupabaseVideoById } from '@/services/videoService';
 import { useQuery } from '@tanstack/react-query';
 import db from '@/data/database';
