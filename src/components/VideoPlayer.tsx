@@ -46,15 +46,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         
         if (videoUrl.includes('/')) {
           console.log("Getting public URL for Supabase storage path:", videoUrl);
-          const { data, error } = await supabase.storage
+          const { data } = await supabase.storage
             .from('skill_videos')
             .getPublicUrl(videoUrl);
             
-          if (error) {
-            console.error("Error getting public URL:", error);
-            throw error;
-          }
-          
           if (data?.publicUrl) {
             console.log("Got public URL:", data.publicUrl);
             setActualVideoUrl(data.publicUrl);
