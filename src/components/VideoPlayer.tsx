@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Volume2, VolumeX, SkipForward, SkipBack } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { toast } from '@/hooks/use-toast';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -29,32 +30,69 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Ensure URL is properly formed for playback
   const getVideoSrc = () => {
-    // If it's a full URL (http/https) use as is
-    if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+    // For local files that start with a relative path
+    if (videoUrl.startsWith('/local/')) {
+      console.log("Using local file:", videoUrl);
       return videoUrl;
     }
     
-    // If it's a relative path starting with /skill_videos, use a demo video
-    // In production, this would be the actual Supabase storage URL
+    // If it's a full URL (http/https) use as is
+    if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+      console.log("Using remote URL:", videoUrl);
+      return videoUrl;
+    }
+    
+    // If it's a path string but doesn't have a protocol, try to form a proper URL
+    // This handles paths that might be stored in Supabase like "skill_videos/video1.mp4"
+    if (videoUrl.includes('/')) {
+      const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+      console.log("Using demo video for development:", demoVideoUrl);
+      return demoVideoUrl;
+    }
+    
+    // Fallback to a demo video if nothing else works
+    console.log("Using fallback demo video");
     return 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
   };
 
   useEffect(() => {
-    // Log the URL to help debug
-    console.log("Video URL being used:", getVideoSrc());
+    // Reset player state when video URL changes
+    if (videoRef.current) {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setIsLoading(true);
+      setError(null);
+      
+      // Preload the video
+      videoRef.current.load();
+      
+      console.log("Video source changed to:", getVideoSrc());
+    }
   }, [videoUrl]);
 
   const togglePlay = () => {
     if (videoRef.current) {
       if (isPlaying) {
         videoRef.current.pause();
+        setIsPlaying(false);
       } else {
-        videoRef.current.play().catch(err => {
-          console.error("Error playing video:", err);
-          setError("Failed to play video. Please try again.");
-        });
+        const playPromise = videoRef.current.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            // Playback started successfully
+            setIsPlaying(true);
+          }).catch(err => {
+            console.error("Error playing video:", err);
+            setError("Failed to play video. This may be due to autoplay restrictions or format issues.");
+            toast({
+              title: "Playback Error",
+              description: "Could not start video playback. Try clicking play again.",
+              variant: "destructive"
+            });
+          });
+        }
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -67,7 +105,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const seek = (seconds: number) => {
     if (videoRef.current) {
-      videoRef.current.currentTime += seconds;
+      const newTime = videoRef.current.currentTime + seconds;
+      // Ensure we don't seek beyond video boundaries
+      videoRef.current.currentTime = Math.max(0, Math.min(newTime, videoRef.current.duration));
     }
   };
 
@@ -81,13 +121,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (videoRef.current) {
       setDuration(videoRef.current.duration);
       setIsLoading(false);
+      console.log("Video metadata loaded. Duration:", videoRef.current.duration);
     }
   };
 
-  const handleVideoError = () => {
-    console.error("Video failed to load:", getVideoSrc());
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    console.error("Video failed to load:", e);
     setError("Failed to load video. Please check your connection or try a different video.");
     setIsLoading(false);
+    toast({
+      title: "Video Error",
+      description: "Unable to load the video. Please try again later.",
+      variant: "destructive"
+    });
   };
 
   const formatTime = (time: number) => {
@@ -117,6 +163,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   setError(null);
                   if (videoRef.current) {
                     videoRef.current.load();
+                    console.log("Retrying video load for:", getVideoSrc());
                   }
                 }}
               >
@@ -136,6 +183,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           onLoadedMetadata={handleLoadedMetadata}
           onError={handleVideoError}
           controls={false}
+          preload="metadata"
+          playsInline
         />
 
         {/* Video controls overlay */}
@@ -200,7 +249,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="flex flex-wrap gap-2">
             {categories.map((category, index) => (
               <Badge key={index} variant="outline" className="capitalize">
-                {category.replace(/-/g, ' ')}
+                {typeof category === 'string' ? category.replace(/-/g, ' ') : category}
               </Badge>
             ))}
           </div>

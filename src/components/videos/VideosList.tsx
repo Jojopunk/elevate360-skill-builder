@@ -4,6 +4,7 @@ import { VideoIcon, Download } from 'lucide-react';
 import VideoCard from './VideoCard';
 import { SupabaseVideo } from '@/services/videoService';
 import { VideoResource } from '@/data/database';
+import { Link } from 'react-router-dom';
 
 interface VideosListProps {
   isLoadingSupabase?: boolean;
@@ -72,15 +73,28 @@ const VideosList: React.FC<VideosListProps> = ({
           ? localVideos.some(lv => lv.videoUrl === (video as SupabaseVideo).video_url && lv.isDownloaded)
           : (video as VideoResource).isDownloaded;
         
+        // Determine the video ID for the link
+        const videoId = isSupabaseVideo 
+          ? (video as SupabaseVideo).id 
+          : (video as VideoResource).id;
+        
         return (
-          <VideoCard
+          <Link 
+            to={`/videos/${videoId}`} 
             key={isSupabaseVideo ? (video as SupabaseVideo).id : `local-${index}`}
-            video={video}
-            isDownloaded={isDownloaded}
-            onDownload={handleDownload}
-            formatDuration={formatDuration}
-            isSupabaseVideo={isSupabaseVideo}
-          />
+            className="block"
+          >
+            <VideoCard
+              video={video}
+              isDownloaded={isDownloaded}
+              onDownload={(e) => {
+                e.preventDefault(); // Prevent navigation when clicking download
+                if (isSupabaseVideo) handleDownload(video as SupabaseVideo);
+              }}
+              formatDuration={formatDuration}
+              isSupabaseVideo={isSupabaseVideo}
+            />
+          </Link>
         );
       })}
     </div>

@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import MobileLayout from '@/components/layouts/MobileLayout';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Button } from '@/components/ui/button';
-import { fetchSupabaseVideoById, findVideoByUrl } from '@/services/videoService';
+import { fetchSupabaseVideoById } from '@/services/videoService';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import db from '@/data/database';
@@ -51,6 +51,21 @@ const VideoDetail = () => {
           if (video) {
             console.log("Local video loaded:", video);
             setLocalVideo(video);
+          } else {
+            console.log("No local video found with ID:", numId);
+          }
+        } else {
+          // If it's not a number, try finding by videoUrl (for Supabase videos saved locally)
+          const allVideos = await db.videoResources.toArray();
+          const matchingVideo = allVideos.find(v => 
+            v.videoUrl && v.videoUrl.includes(id)
+          );
+          
+          if (matchingVideo) {
+            console.log("Local video found by URL match:", matchingVideo);
+            setLocalVideo(matchingVideo);
+          } else {
+            console.log("No local video found matching ID in URL:", id);
           }
         }
       } catch (error) {
@@ -90,8 +105,9 @@ const VideoDetail = () => {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <div className="flex justify-center items-center h-60">
-            <p>Video not found</p>
+          <div className="flex justify-center items-center h-60 flex-col gap-2">
+            <p className="text-red-500">Video not found</p>
+            <p className="text-sm text-gray-500">The requested video could not be found</p>
           </div>
         </div>
       </MobileLayout>
