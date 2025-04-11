@@ -109,6 +109,9 @@ const VideoDetail = () => {
           <div className="flex justify-center items-center h-60 flex-col gap-2">
             <p className="text-red-500">Video not found</p>
             <p className="text-sm text-gray-500">The requested video could not be found</p>
+            <Button onClick={() => navigate('/videos')}>
+              Browse Videos
+            </Button>
           </div>
         </div>
       </MobileLayout>
@@ -120,6 +123,8 @@ const VideoDetail = () => {
   const title = video.title;
   const description = supabaseVideo ? supabaseVideo.description : video.description;
   const categories = supabaseVideo ? supabaseVideo.skill_categories : video.skillCategory;
+
+  console.log("Rendering VideoPlayer with URL:", videoUrl);
 
   return (
     <MobileLayout>
@@ -133,7 +138,7 @@ const VideoDetail = () => {
           videoUrl={videoUrl} 
           title={title} 
           description={description}
-          categories={categories}
+          categories={categories || []}
         />
       </div>
     </MobileLayout>

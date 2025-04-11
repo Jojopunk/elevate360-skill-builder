@@ -1,8 +1,9 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, Pause, Volume2, VolumeX, SkipForward, SkipBack } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, SkipForward, SkipBack, RefreshCw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -32,6 +33,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   useEffect(() => {
     const getActualVideoUrl = async () => {
       try {
+        console.log("Processing video URL:", videoUrl);
+        
+        if (!videoUrl) {
+          console.error("No video URL provided");
+          throw new Error("No video URL provided");
+        }
+        
         if (videoUrl.startsWith('/local/')) {
           console.log("Using local file:", videoUrl);
           setActualVideoUrl(videoUrl);
@@ -44,30 +52,42 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           return;
         }
         
-        if (videoUrl.includes('/')) {
-          console.log("Getting public URL for Supabase storage path:", videoUrl);
+        // Handle Supabase storage path
+        console.log("Getting public URL for Supabase storage path:", videoUrl);
+        
+        // Clean up path if needed (remove leading slashes)
+        const cleanPath = videoUrl.startsWith('/') ? videoUrl.substring(1) : videoUrl;
+        
+        try {
           const { data } = await supabase.storage
             .from('skill_videos')
-            .getPublicUrl(videoUrl);
+            .getPublicUrl(cleanPath);
             
           if (data?.publicUrl) {
             console.log("Got public URL:", data.publicUrl);
             setActualVideoUrl(data.publicUrl);
           } else {
-            const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
-            console.log("Using demo video as fallback:", demoVideoUrl);
-            setActualVideoUrl(demoVideoUrl);
+            console.error("Failed to get public URL, no data returned");
+            throw new Error("Failed to get public URL");
           }
-        } else {
-          const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
-          console.log("Using fallback demo video:", demoVideoUrl);
-          setActualVideoUrl(demoVideoUrl);
+        } catch (storageError) {
+          console.error("Storage error:", storageError);
+          throw storageError;
         }
       } catch (err) {
         console.error("Error processing video URL:", err);
         setError("Could not load video source");
+        
+        // Use fallback video
         const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+        console.log("Using fallback demo video:", demoVideoUrl);
         setActualVideoUrl(demoVideoUrl);
+        
+        toast({
+          title: "Video Error",
+          description: "Could not load the requested video. Using a demo video instead.",
+          variant: "destructive"
+        });
       }
     };
     
@@ -151,6 +171,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     });
   };
 
+  const retryLoading = () => {
+    setError(null);
+    if (videoRef.current) {
+      videoRef.current.load();
+      console.log("Retrying video load for:", actualVideoUrl);
+    }
+  };
+
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -172,14 +200,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               <p className="mb-2">{error}</p>
               <Button 
                 variant="outline" 
-                onClick={() => {
-                  setError(null);
-                  if (videoRef.current) {
-                    videoRef.current.load();
-                    console.log("Retrying video load for:", actualVideoUrl);
-                  }
-                }}
+                onClick={retryLoading}
+                className="mr-2"
               >
+                <RefreshCw className="h-4 w-4 mr-1" />
                 Retry
               </Button>
             </div>
@@ -188,7 +212,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
         <video
           ref={videoRef}
-          src={actualVideoUrl || undefined}
           className="w-full h-auto"
           onEnded={() => setIsPlaying(false)}
           onTimeUpdate={handleTimeUpdate}
@@ -197,7 +220,10 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           controls={false}
           preload="metadata"
           playsInline
-        />
+        >
+          {actualVideoUrl && <source src={actualVideoUrl} type="video/mp4" />}
+          Your browser does not support the video tag.
+        </video>
 
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
           <div className="flex justify-between items-center">
