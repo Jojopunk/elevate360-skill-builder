@@ -19,7 +19,8 @@ const VideoDetail = () => {
   const { data: supabaseVideo, isLoading: isLoadingSupabase, error } = useQuery({
     queryKey: ['video', id],
     queryFn: () => fetchSupabaseVideoById(id!),
-    enabled: !!id
+    enabled: !!id,
+    retry: 1, // Only retry once to avoid multiple fallbacks to local
   });
 
   // Log for debugging

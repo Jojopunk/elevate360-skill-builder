@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Play, Pause, Volume2, VolumeX, SkipForward, SkipBack } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -26,49 +26,71 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actualVideoUrl, setActualVideoUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Ensure URL is properly formed for playback
-  const getVideoSrc = () => {
-    // For local files that start with a relative path
-    if (videoUrl.startsWith('/local/')) {
-      console.log("Using local file:", videoUrl);
-      return videoUrl;
-    }
+  useEffect(() => {
+    const getActualVideoUrl = async () => {
+      try {
+        if (videoUrl.startsWith('/local/')) {
+          console.log("Using local file:", videoUrl);
+          setActualVideoUrl(videoUrl);
+          return;
+        }
+        
+        if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+          console.log("Using remote URL:", videoUrl);
+          setActualVideoUrl(videoUrl);
+          return;
+        }
+        
+        if (videoUrl.includes('/')) {
+          console.log("Getting public URL for Supabase storage path:", videoUrl);
+          const { data, error } = await supabase.storage
+            .from('videos')
+            .getPublicUrl(videoUrl);
+            
+          if (error) {
+            console.error("Error getting public URL:", error);
+            throw error;
+          }
+          
+          if (data?.publicUrl) {
+            console.log("Got public URL:", data.publicUrl);
+            setActualVideoUrl(data.publicUrl);
+          } else {
+            const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+            console.log("Using demo video as fallback:", demoVideoUrl);
+            setActualVideoUrl(demoVideoUrl);
+          }
+        } else {
+          const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+          console.log("Using fallback demo video:", demoVideoUrl);
+          setActualVideoUrl(demoVideoUrl);
+        }
+      } catch (err) {
+        console.error("Error processing video URL:", err);
+        setError("Could not load video source");
+        const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+        setActualVideoUrl(demoVideoUrl);
+      }
+    };
     
-    // If it's a full URL (http/https) use as is
-    if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
-      console.log("Using remote URL:", videoUrl);
-      return videoUrl;
-    }
-    
-    // If it's a path string but doesn't have a protocol, try to form a proper URL
-    // This handles paths that might be stored in Supabase like "skill_videos/video1.mp4"
-    if (videoUrl.includes('/')) {
-      const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
-      console.log("Using demo video for development:", demoVideoUrl);
-      return demoVideoUrl;
-    }
-    
-    // Fallback to a demo video if nothing else works
-    console.log("Using fallback demo video");
-    return 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
-  };
+    getActualVideoUrl();
+  }, [videoUrl]);
 
   useEffect(() => {
-    // Reset player state when video URL changes
-    if (videoRef.current) {
+    if (videoRef.current && actualVideoUrl) {
       setIsPlaying(false);
       setCurrentTime(0);
       setIsLoading(true);
       setError(null);
       
-      // Preload the video
       videoRef.current.load();
       
-      console.log("Video source changed to:", getVideoSrc());
+      console.log("Video source changed to:", actualVideoUrl);
     }
-  }, [videoUrl]);
+  }, [actualVideoUrl]);
 
   const togglePlay = () => {
     if (videoRef.current) {
@@ -80,7 +102,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         
         if (playPromise !== undefined) {
           playPromise.then(() => {
-            // Playback started successfully
             setIsPlaying(true);
           }).catch(err => {
             console.error("Error playing video:", err);
@@ -106,7 +127,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const seek = (seconds: number) => {
     if (videoRef.current) {
       const newTime = videoRef.current.currentTime + seconds;
-      // Ensure we don't seek beyond video boundaries
       videoRef.current.currentTime = Math.max(0, Math.min(newTime, videoRef.current.duration));
     }
   };
@@ -145,14 +165,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <Card className="overflow-hidden">
       <div className="relative">
-        {/* Loading indicator */}
         {isLoading && (
           <div className="absolute inset-0 bg-black/20 flex items-center justify-center z-10">
             <div className="text-white">Loading video...</div>
           </div>
         )}
 
-        {/* Error message */}
         {error && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
             <div className="text-white text-center p-4">
@@ -163,7 +181,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                   setError(null);
                   if (videoRef.current) {
                     videoRef.current.load();
-                    console.log("Retrying video load for:", getVideoSrc());
+                    console.log("Retrying video load for:", actualVideoUrl);
                   }
                 }}
               >
@@ -173,10 +191,9 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
         )}
 
-        {/* Video element */}
         <video
           ref={videoRef}
-          src={getVideoSrc()}
+          src={actualVideoUrl || undefined}
           className="w-full h-auto"
           onEnded={() => setIsPlaying(false)}
           onTimeUpdate={handleTimeUpdate}
@@ -187,7 +204,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           playsInline
         />
 
-        {/* Video controls overlay */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
           <div className="flex justify-between items-center">
             <Button 
@@ -233,7 +249,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             </div>
           </div>
           
-          {/* Progress bar */}
           <Progress
             value={duration > 0 ? (currentTime / duration) * 100 : 0}
             className="h-1 mt-2"
