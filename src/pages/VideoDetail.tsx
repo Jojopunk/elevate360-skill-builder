@@ -21,23 +21,31 @@ const VideoDetail = () => {
     queryFn: () => fetchSupabaseVideoById(id!),
     enabled: !!id,
     retry: 1, // Only retry once to avoid multiple fallbacks to local
-  });
-
-  // Log for debugging
-  useEffect(() => {
-    if (error) {
-      console.error("Error fetching video from Supabase:", error);
+    onError: (err) => {
+      console.error("Error fetching video from Supabase:", err);
       toast({
         title: "Error loading video",
         description: "Could not load the video from the server. Checking local storage...",
         variant: "destructive"
       });
     }
+  });
+
+  // Log debugging information
+  useEffect(() => {
+    console.log("Video Detail Page - ID:", id);
+    console.log("Supabase video:", supabaseVideo);
+    console.log("Local video:", localVideo);
+    console.log("Is loading from Supabase:", isLoadingSupabase);
     
     if (supabaseVideo) {
-      console.log("Supabase video loaded:", supabaseVideo);
+      console.log("Supabase video loaded successfully");
     }
-  }, [supabaseVideo, error]);
+    
+    if (error) {
+      console.error("Detailed Supabase error:", error);
+    }
+  }, [id, supabaseVideo, localVideo, isLoadingSupabase, error]);
 
   // If not found in Supabase, try to get from local DB
   useEffect(() => {
@@ -45,12 +53,14 @@ const VideoDetail = () => {
       if (!id) return;
       
       try {
+        console.log("Trying to find video in local database with ID:", id);
+        
         // Try to parse as number for local DB
         const numId = parseInt(id, 10);
         if (!isNaN(numId)) {
           const video = await db.videoResources.get(numId);
           if (video) {
-            console.log("Local video loaded:", video);
+            console.log("Local video found by ID:", video);
             setLocalVideo(video);
           } else {
             console.log("No local video found with ID:", numId);
@@ -58,12 +68,17 @@ const VideoDetail = () => {
         } else {
           // If it's not a number, try finding by videoUrl (for Supabase videos saved locally)
           const allVideos = await db.videoResources.toArray();
+          console.log("Searching through all local videos:", allVideos.length);
+          
           const matchingVideo = allVideos.find(v => 
-            v.videoUrl && v.videoUrl.includes(id)
+            v.videoUrl && (
+              v.videoUrl.includes(id) || 
+              (typeof v.id === 'string' && v.id === id)
+            )
           );
           
           if (matchingVideo) {
-            console.log("Local video found by URL match:", matchingVideo);
+            console.log("Local video found by URL or ID match:", matchingVideo);
             setLocalVideo(matchingVideo);
           } else {
             console.log("No local video found matching ID in URL:", id);
@@ -74,10 +89,10 @@ const VideoDetail = () => {
       }
     };
 
-    if (!supabaseVideo) {
+    if (!supabaseVideo && !isLoadingSupabase) {
       getLocalVideo();
     }
-  }, [id, supabaseVideo]);
+  }, [id, supabaseVideo, isLoadingSupabase]);
 
   const video = supabaseVideo || localVideo;
   const isLoading = isLoadingSupabase && !localVideo;

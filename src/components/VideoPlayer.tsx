@@ -30,39 +30,52 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [actualVideoUrl, setActualVideoUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Debug the incoming video URL
+  console.log("VideoPlayer received videoUrl:", videoUrl);
+
   useEffect(() => {
     const getActualVideoUrl = async () => {
       try {
-        console.log("Processing video URL:", videoUrl);
+        setIsLoading(true);
+        setError(null);
         
         if (!videoUrl) {
           console.error("No video URL provided");
           throw new Error("No video URL provided");
         }
         
-        if (videoUrl.startsWith('/local/')) {
-          console.log("Using local file:", videoUrl);
+        // For local files or absolute URLs, use them directly
+        if (videoUrl.startsWith('/local/') || videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
+          console.log("Using direct URL:", videoUrl);
           setActualVideoUrl(videoUrl);
           return;
         }
         
-        if (videoUrl.startsWith('http://') || videoUrl.startsWith('https://')) {
-          console.log("Using remote URL:", videoUrl);
-          setActualVideoUrl(videoUrl);
-          return;
-        }
-        
-        // Handle Supabase storage path
-        console.log("Getting public URL for Supabase storage path:", videoUrl);
+        // If it's a relative path in Supabase Storage
+        console.log("Processing Supabase storage path:", videoUrl);
         
         // Clean up path if needed (remove leading slashes)
         const cleanPath = videoUrl.startsWith('/') ? videoUrl.substring(1) : videoUrl;
         
         try {
-          const { data } = await supabase.storage
+          // Create the storage bucket if it doesn't exist yet
+          const { error: bucketError } = await supabase.storage.getBucket('skill_videos');
+          if (bucketError && bucketError.message.includes('The resource was not found')) {
+            console.log("Creating skill_videos bucket");
+            await supabase.storage.createBucket('skill_videos', {
+              public: true
+            });
+          }
+          
+          const { data, error: urlError } = await supabase.storage
             .from('skill_videos')
             .getPublicUrl(cleanPath);
             
+          if (urlError) {
+            console.error("Supabase getPublicUrl error:", urlError);
+            throw urlError;
+          }
+          
           if (data?.publicUrl) {
             console.log("Got public URL:", data.publicUrl);
             setActualVideoUrl(data.publicUrl);
@@ -70,24 +83,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             console.error("Failed to get public URL, no data returned");
             throw new Error("Failed to get public URL");
           }
-        } catch (storageError) {
+        } catch (storageError: any) {
           console.error("Storage error:", storageError);
-          throw storageError;
+          throw new Error(`Storage error: ${storageError.message || 'Unknown error'}`);
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Error processing video URL:", err);
-        setError("Could not load video source");
+        setError(`Could not load video source: ${err.message}`);
         
-        // Use fallback video
-        const demoVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
-        console.log("Using fallback demo video:", demoVideoUrl);
-        setActualVideoUrl(demoVideoUrl);
+        // Fallback to a test video that's guaranteed to work
+        const fallbackVideo = 'https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+        console.log("Using fallback video:", fallbackVideo);
+        setActualVideoUrl(fallbackVideo);
         
         toast({
           title: "Video Error",
           description: "Could not load the requested video. Using a demo video instead.",
           variant: "destructive"
         });
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -98,8 +113,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (videoRef.current && actualVideoUrl) {
       setIsPlaying(false);
       setCurrentTime(0);
-      setIsLoading(true);
-      setError(null);
       
       videoRef.current.load();
       
@@ -173,6 +186,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const retryLoading = () => {
     setError(null);
+    setIsLoading(true);
     if (videoRef.current) {
       videoRef.current.load();
       console.log("Retrying video load for:", actualVideoUrl);

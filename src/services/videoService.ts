@@ -16,6 +16,8 @@ export interface SupabaseVideo {
 }
 
 export async function fetchSupabaseVideos(): Promise<SupabaseVideo[]> {
+  console.log("Fetching videos from Supabase");
+  
   const { data, error } = await supabase
     .from('video_resources')
     .select('*')
@@ -26,22 +28,31 @@ export async function fetchSupabaseVideos(): Promise<SupabaseVideo[]> {
     throw error;
   }
 
+  console.log("Successfully fetched videos from Supabase:", data?.length || 0);
   return data || [];
 }
 
 export async function fetchSupabaseVideoById(id: string): Promise<SupabaseVideo | null> {
-  const { data, error } = await supabase
-    .from('video_resources')
-    .select('*')
-    .eq('id', id)
-    .maybeSingle();
+  console.log("Fetching video from Supabase with ID:", id);
+  
+  try {
+    const { data, error } = await supabase
+      .from('video_resources')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
 
-  if (error) {
-    console.error("Error fetching video by ID:", error);
+    if (error) {
+      console.error("Error fetching video by ID:", error);
+      throw error;
+    }
+
+    console.log("Video fetch result:", data);
+    return data;
+  } catch (error) {
+    console.error("Exception in fetchSupabaseVideoById:", error);
     return null;
   }
-
-  return data;
 }
 
 // Fix for the database videoUrl index error we saw in console logs
