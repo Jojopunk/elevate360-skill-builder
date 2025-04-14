@@ -16,6 +16,30 @@ export interface SupabaseVideo {
   updated_at: string;
 }
 
+// Extract YouTube video ID from a YouTube URL
+export function extractYoutubeVideoId(url: string): string | null {
+  if (!url) return null;
+  
+  // Match patterns like: 
+  // https://www.youtube.com/watch?v=QGHBq5OEsBM
+  // https://youtu.be/QGHBq5OEsBM
+  // https://youtube.com/watch?v=QGHBq5OEsBM
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+  const match = url.match(regex);
+  
+  return match ? match[1] : null;
+}
+
+// Get YouTube thumbnail URL from video ID
+export function getYoutubeThumbnailUrl(videoId: string): string {
+  return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+}
+
+// Check if a URL is a YouTube video URL
+export function isYoutubeUrl(url: string): boolean {
+  return url.includes("youtube.com") || url.includes("youtu.be");
+}
+
 export async function fetchSupabaseVideos(): Promise<SupabaseVideo[]> {
   console.log("Fetching videos from Supabase");
   
@@ -158,9 +182,58 @@ export function convertLocalToSupabaseFormat(video: VideoResource): SupabaseVide
   };
 }
 
+// Add YouTube video to Supabase
+export async function addYoutubeVideoToSupabase(youtubeUrl: string, title: string, description: string, categories: string[]): Promise<SupabaseVideo | null> {
+  try {
+    const videoId = extractYoutubeVideoId(youtubeUrl);
+    
+    if (!videoId) {
+      toast({
+        title: "Invalid YouTube URL",
+        description: "Could not extract video ID from the provided URL",
+        variant: "destructive"
+      });
+      return null;
+    }
+    
+    const thumbnailUrl = getYoutubeThumbnailUrl(videoId);
+    
+    // Create a new video record in Supabase
+    const { data, error } = await supabase
+      .from('video_resources')
+      .insert([
+        {
+          title: title,
+          description: description,
+          video_url: youtubeUrl,
+          thumbnail_url: thumbnailUrl,
+          duration: 0, // We don't know the duration yet
+          skill_categories: categories
+        }
+      ])
+      .select()
+      .single();
+      
+    if (error) {
+      console.error("Error adding YouTube video to Supabase:", error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("Exception in addYoutubeVideoToSupabase:", error);
+    toast({
+      title: "Failed to add video",
+      description: "There was a problem adding this YouTube video",
+      variant: "destructive"
+    });
+    return null;
+  }
+}
+
 // Provide fallback videos when Supabase is unavailable
 function getFallbackVideos(): SupabaseVideo[] {
-  return [
+  const fallbackVideos = [
     {
       id: "1",
       title: "Effective Communication (Offline)",
@@ -193,6 +266,19 @@ function getFallbackVideos(): SupabaseVideo[] {
       skill_categories: ["communication", "teamwork", "leadership"],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
+    },
+    {
+      id: "4",
+      title: "Introduction to Web Development",
+      description: "Learn the basics of HTML, CSS and JavaScript",
+      video_url: "https://www.youtube.com/watch?v=QGHBq5OEsBM",
+      thumbnail_url: getYoutubeThumbnailUrl("QGHBq5OEsBM"),
+      duration: 600,
+      skill_categories: ["coding", "web-development"],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
   ];
+  
+  return fallbackVideos;
 }
