@@ -66,6 +66,7 @@ export const useVideoPlayer = (videoRef: RefObject<HTMLVideoElement>) => {
     setDuration,
     setIsLoading,
     setError,
+    setIsPlaying,
     togglePlay,
     toggleMute,
     seek,

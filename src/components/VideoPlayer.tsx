@@ -3,7 +3,6 @@ import React, { useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useVideoPlayer } from '@/hooks/use-video-player';
 import VideoControls from './video/VideoControls';
 import VideoMetadata from './video/VideoMetadata';
@@ -33,6 +32,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     setDuration,
     setIsLoading,
     setError,
+    setIsPlaying,
     togglePlay,
     toggleMute,
     seek,
