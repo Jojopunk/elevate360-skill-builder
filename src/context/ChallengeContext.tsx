@@ -36,51 +36,60 @@ export const ChallengeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const todayEnd = new Date(today);
     todayEnd.setHours(23, 59, 59, 999);
     
-    // Find any challenges completed today
-    const completedToday = await db.userProgress
-      .where('userId').equals(currentUser.id!)
-      .and(progress => {
-        const completionDate = new Date(progress.completedAt);
-        return completionDate >= todayStart && completionDate <= todayEnd;
-      })
-      .toArray();
-    
-    setHasCompletedDailyChallenge(completedToday.length > 0);
+    try {
+      // Find any challenges completed today
+      const completedToday = await db.userProgress
+        .where('userId').equals(currentUser.id!)
+        .and(progress => {
+          const completionDate = new Date(progress.completedAt);
+          return completionDate >= todayStart && completionDate <= todayEnd;
+        })
+        .toArray();
+      
+      setHasCompletedDailyChallenge(completedToday.length > 0);
+    } catch (error) {
+      console.error("Error checking daily completion:", error);
+      setHasCompletedDailyChallenge(false);
+    }
   };
 
   const updateUserStreak = async () => {
     if (!currentUser) return;
     
-    const userStreak = await db.userStreaks
-      .where('userId').equals(currentUser.id!)
-      .first();
-    
-    if (!userStreak) return;
-    
-    const today = getToday();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const lastCompletedDate = new Date(userStreak.lastCompletedDate);
-    lastCompletedDate.setHours(0, 0, 0, 0);
-    
-    let newStreak = userStreak.currentStreak;
-    
-    // Check if this is a continuation of the streak
-    if (lastCompletedDate.getTime() === yesterday.getTime()) {
-      newStreak += 1;
-    } 
-    // Check if the streak was broken (more than a day since last completion)
-    else if (lastCompletedDate.getTime() < yesterday.getTime()) {
-      newStreak = 1; // Reset streak
+    try {
+      const userStreak = await db.userStreaks
+        .where('userId').equals(currentUser.id!)
+        .first();
+      
+      if (!userStreak) return;
+      
+      const today = getToday();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const lastCompletedDate = new Date(userStreak.lastCompletedDate);
+      lastCompletedDate.setHours(0, 0, 0, 0);
+      
+      let newStreak = userStreak.currentStreak;
+      
+      // Check if this is a continuation of the streak
+      if (lastCompletedDate.getTime() === yesterday.getTime()) {
+        newStreak += 1;
+      } 
+      // Check if the streak was broken (more than a day since last completion)
+      else if (lastCompletedDate.getTime() < yesterday.getTime()) {
+        newStreak = 1; // Reset streak
+      }
+      // If completed already today, don't change the streak
+      
+      await db.userStreaks.update(userStreak.id!, {
+        currentStreak: newStreak,
+        longestStreak: Math.max(newStreak, userStreak.longestStreak),
+        lastCompletedDate: today
+      });
+    } catch (error) {
+      console.error("Error updating user streak:", error);
     }
-    // If completed already today, don't change the streak
-    
-    await db.userStreaks.update(userStreak.id!, {
-      currentStreak: newStreak,
-      longestStreak: Math.max(newStreak, userStreak.longestStreak),
-      lastCompletedDate: today
-    });
   };
 
   const loadDailyChallenge = async () => {
@@ -96,6 +105,7 @@ export const ChallengeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         
         // Get all challenges
         const allChallenges = await db.dailyChallenges.toArray();
+        console.log("Available challenges:", allChallenges.length);
         
         if (allChallenges.length > 0) {
           // If user is logged in, try to find a challenge they haven't done
@@ -122,9 +132,11 @@ export const ChallengeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             challenge = allChallenges[randomIndex];
           }
           
+          console.log("Selected challenge:", challenge);
           setDailyChallenge(challenge);
         } else {
           setDailyChallenge(null);
+          console.error("No challenges available in database");
           toast({
             title: "No Challenges Available",
             description: "Please check back later for new challenges.",
