@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -21,13 +20,15 @@ const VideoDetail = () => {
     queryFn: () => fetchSupabaseVideoById(id!),
     enabled: !!id,
     retry: 1, // Only retry once to avoid multiple fallbacks to local
-    onError: (err) => {
-      console.error("Error fetching video from Supabase:", err);
-      toast({
-        title: "Error loading video",
-        description: "Could not load the video from the server. Checking local storage...",
-        variant: "destructive"
-      });
+    meta: {
+      onError: (err: any) => {
+        console.error("Error fetching video from Supabase:", err);
+        toast({
+          title: "Error loading video",
+          description: "Could not load the video from the server. Checking local storage...",
+          variant: "destructive"
+        });
+      }
     }
   });
 

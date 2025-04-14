@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { VideoResource } from "@/data/database";
 import db from "@/data/database";
@@ -51,7 +50,7 @@ export async function fetchSupabaseVideoById(id: string): Promise<SupabaseVideo 
     return data;
   } catch (error) {
     console.error("Exception in fetchSupabaseVideoById:", error);
-    return null;
+    throw error;
   }
 }
 
