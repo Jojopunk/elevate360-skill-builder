@@ -16,7 +16,18 @@ const config: CapacitorConfig = {
       showSpinner: true,
       spinnerColor: "#ffffff",
     },
+    CapacitorHttp: {
+      enabled: true
+    }
   },
+  android: {
+    buildOptions: {
+      keystorePath: "android.keystore",
+      keystoreAlias: "androiddebugkey",
+      keystorePassword: "android",
+      keystoreAliasPassword: "android",
+    }
+  }
 };
 
 export default config;
