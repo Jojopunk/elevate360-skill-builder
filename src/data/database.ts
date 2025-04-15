@@ -194,37 +194,50 @@ export async function seedDatabaseWithInitialData() {
     
     if (videoCount === 0) {
       console.log("Seeding video resources...");
-      // Seed video resources
       try {
         await db.videoResources.bulkAdd([
           {
-            title: "Mastering Emotional Intelligence",
-            description: "Learn the four components of EI and how to apply them in workplace scenarios",
-            videoUrl: "https://example.com/videos/emotional-intelligence",
-            thumbnailUrl: "https://example.com/thumbnails/emotional-intelligence.jpg",
-            duration: 843, // 14:03 minutes
-            skillCategory: ["emotional-intelligence", "leadership"],
-            isDownloaded: false,
+            title: "Communication Skills Masterclass",
+            description: "Learn effective communication techniques for professional success",
+            videoUrl: "/videos/communication-skills.mp4",
+            thumbnailUrl: "/videos/thumbnails/communication.jpg",
+            duration: 360, // 6 minutes
+            skillCategory: ["communication", "professional-development"],
+            isDownloaded: true,
+            localFilePath: "/videos/communication-skills.mp4",
             createdAt: new Date()
           },
           {
-            title: "Effective Communication Techniques",
-            description: "Practical techniques to improve clarity, empathy and impact in your communication",
-            videoUrl: "https://example.com/videos/communication",
-            thumbnailUrl: "https://example.com/thumbnails/communication.jpg",
-            duration: 1105, // 18:25 minutes
-            skillCategory: ["communication"],
-            isDownloaded: false,
+            title: "Team Leadership Essentials",
+            description: "Master the fundamentals of leading high-performing teams",
+            videoUrl: "/videos/leadership.mp4",
+            thumbnailUrl: "/videos/thumbnails/leadership.jpg",
+            duration: 480, // 8 minutes
+            skillCategory: ["leadership", "management"],
+            isDownloaded: true,
+            localFilePath: "/videos/leadership.mp4",
             createdAt: new Date()
           },
           {
-            title: "Conflict Resolution Strategies",
-            description: "Learn how to address and resolve conflicts in a constructive manner",
-            videoUrl: "https://example.com/videos/conflict-resolution",
-            thumbnailUrl: "https://example.com/thumbnails/conflict-resolution.jpg",
-            duration: 957, // 15:57 minutes
-            skillCategory: ["conflict-resolution", "teamwork"],
-            isDownloaded: false,
+            title: "Problem Solving Workshop",
+            description: "Develop critical thinking and problem-solving abilities",
+            videoUrl: "/videos/problem-solving.mp4",
+            thumbnailUrl: "/videos/thumbnails/problem-solving.jpg",
+            duration: 420, // 7 minutes
+            skillCategory: ["critical-thinking", "problem-solving"],
+            isDownloaded: true,
+            localFilePath: "/videos/problem-solving.mp4",
+            createdAt: new Date()
+          },
+          {
+            title: "Time Management Strategies",
+            description: "Learn effective time management and productivity techniques",
+            videoUrl: "/videos/time-management.mp4",
+            thumbnailUrl: "/videos/thumbnails/time-management.jpg",
+            duration: 300, // 5 minutes
+            skillCategory: ["productivity", "self-management"],
+            isDownloaded: true,
+            localFilePath: "/videos/time-management.mp4",
             createdAt: new Date()
           }
         ]);
