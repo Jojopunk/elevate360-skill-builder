@@ -5,7 +5,8 @@ import { useChallenge } from '@/context/ChallengeContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
-import { AlertCircle, CheckCircle, HelpCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, HelpCircle, Loader2, RefreshCw } from 'lucide-react';
+import { seedDatabaseWithInitialData } from '@/data/database';
 
 const Learn = () => {
   const { toast } = useToast();
@@ -22,6 +23,7 @@ const Learn = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleOptionSelect = (option: string) => {
     if (userAnswer || submitting) return;
@@ -56,6 +58,27 @@ const Learn = () => {
     setShowExplanation(false);
     setIsCorrect(null);
     loadNextChallenge();
+  };
+
+  const handleRefreshDatabase = async () => {
+    setRefreshing(true);
+    try {
+      await seedDatabaseWithInitialData();
+      toast({
+        title: "Database Refreshed",
+        description: "Challenge database has been refreshed. Loading new challenge...",
+      });
+      await loadNextChallenge();
+    } catch (error) {
+      console.error("Error refreshing database:", error);
+      toast({
+        title: "Error",
+        description: "Failed to refresh the database. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   if (isLoading) {
@@ -96,8 +119,30 @@ const Learn = () => {
             <AlertCircle className="h-12 w-12 text-yellow-500" />
           </div>
           <h1 className="text-2xl font-bold text-navy mb-2">No Challenges Available</h1>
-          <p className="text-gray-600 text-center">
-            We couldn't find any challenges right now. Please try again later.
+          <p className="text-gray-600 text-center mb-6">
+            We couldn't find any challenges right now. This might be because the database hasn't been properly initialized.
+          </p>
+          
+          <Button 
+            onClick={handleRefreshDatabase}
+            disabled={refreshing}
+            className="bg-navy hover:bg-navy-dark flex items-center gap-2 mb-4"
+          >
+            {refreshing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Refreshing Database...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4" />
+                Refresh Challenge Database
+              </>
+            )}
+          </Button>
+          
+          <p className="text-xs text-gray-500 text-center">
+            If problems persist, try clearing your browser cache or restarting the application.
           </p>
         </div>
       </MobileLayout>
@@ -167,7 +212,21 @@ const Learn = () => {
               </div>
             )}
           </CardContent>
-          <CardFooter className="flex justify-end">
+          <CardFooter className="flex justify-between">
+            <Button 
+              variant="outline"
+              onClick={handleRefreshDatabase}
+              disabled={refreshing || submitting}
+              className="flex items-center gap-2"
+            >
+              {refreshing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Refresh
+            </Button>
+            
             {!userAnswer ? (
               <Button
                 onClick={handleSubmit}

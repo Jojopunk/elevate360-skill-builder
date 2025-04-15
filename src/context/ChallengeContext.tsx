@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import db, { DailyChallenge, UserProgress } from '../data/database';
+import db, { DailyChallenge, UserProgress, seedDatabaseWithInitialData } from '../data/database';
 import { useAuth } from './AuthContext';
 import { toast } from '../components/ui/use-toast';
 
@@ -96,53 +96,64 @@ export const ChallengeProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       setIsLoading(true);
       
+      // Make sure database is seeded
+      await seedDatabaseWithInitialData();
+      
       // Check if user has completed today's challenge
       await checkDailyCompletion();
       
-      // If user hasn't completed a challenge today, get a random one
-      if (!hasCompletedDailyChallenge) {
-        let challenge: DailyChallenge | undefined;
+      // Get all challenges
+      const allChallenges = await db.dailyChallenges.toArray();
+      console.log("Available challenges:", allChallenges.length);
+      
+      if (allChallenges.length === 0) {
+        console.log("No challenges found in database. Attempting to re-seed...");
+        await seedDatabaseWithInitialData();
+        const recheckChallenges = await db.dailyChallenges.toArray();
+        console.log("After re-seeding, found challenges:", recheckChallenges.length);
         
-        // Get all challenges
-        const allChallenges = await db.dailyChallenges.toArray();
-        console.log("Available challenges:", allChallenges.length);
-        
-        if (allChallenges.length > 0) {
-          // If user is logged in, try to find a challenge they haven't done
-          if (currentUser) {
-            const completedChallengeIds = await db.userProgress
-              .where('userId').equals(currentUser.id!)
-              .toArray()
-              .then(progress => progress.map(p => p.challengeId));
-            
-            const uncompletedChallenges = allChallenges.filter(
-              challenge => !completedChallengeIds.includes(challenge.id!)
-            );
-            
-            if (uncompletedChallenges.length > 0) {
-              // Get a random uncompleted challenge
-              const randomIndex = Math.floor(Math.random() * uncompletedChallenges.length);
-              challenge = uncompletedChallenges[randomIndex];
-            }
-          }
-          
-          // If no specific challenge found, just get a random one
-          if (!challenge) {
-            const randomIndex = Math.floor(Math.random() * allChallenges.length);
-            challenge = allChallenges[randomIndex];
-          }
-          
-          console.log("Selected challenge:", challenge);
-          setDailyChallenge(challenge);
-        } else {
+        if (recheckChallenges.length === 0) {
           setDailyChallenge(null);
-          console.error("No challenges available in database");
+          setIsLoading(false);
           toast({
             title: "No Challenges Available",
             description: "Please check back later for new challenges.",
             variant: "destructive"
           });
+          return;
         }
+      }
+      
+      let challenge: DailyChallenge | undefined;
+      
+      // If user hasn't completed a challenge today, get a random one
+      if (!hasCompletedDailyChallenge) {
+        // If user is logged in, try to find a challenge they haven't done
+        if (currentUser) {
+          const completedChallengeIds = await db.userProgress
+            .where('userId').equals(currentUser.id!)
+            .toArray()
+            .then(progress => progress.map(p => p.challengeId));
+          
+          const uncompletedChallenges = allChallenges.filter(
+            challenge => !completedChallengeIds.includes(challenge.id!)
+          );
+          
+          if (uncompletedChallenges.length > 0) {
+            // Get a random uncompleted challenge
+            const randomIndex = Math.floor(Math.random() * uncompletedChallenges.length);
+            challenge = uncompletedChallenges[randomIndex];
+          }
+        }
+        
+        // If no specific challenge found, just get a random one
+        if (!challenge && allChallenges.length > 0) {
+          const randomIndex = Math.floor(Math.random() * allChallenges.length);
+          challenge = allChallenges[randomIndex];
+        }
+        
+        console.log("Selected challenge:", challenge);
+        setDailyChallenge(challenge || null);
       }
     } catch (error) {
       console.error('Error loading daily challenge:', error);
