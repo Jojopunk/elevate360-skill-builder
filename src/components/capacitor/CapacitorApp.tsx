@@ -6,22 +6,25 @@ import { Capacitor } from '@capacitor/core';
 
 const CapacitorApp: React.FC<{children: React.ReactNode}> = ({ children }) => {
   useEffect(() => {
-    const handleAppStateChange = () => {
-      if (Capacitor.isPluginAvailable('SplashScreen')) {
-        SplashScreen.hide();
-      }
-    };
+    // Only run this effect in Capacitor environment to prevent errors in web/browser
+    if (Capacitor.isNativePlatform()) {
+      const handleAppStateChange = () => {
+        if (Capacitor.isPluginAvailable('SplashScreen')) {
+          SplashScreen.hide();
+        }
+      };
 
-    // Set up event listener for app ready
-    if (Capacitor.isPluginAvailable('App')) {
-      App.addListener('appStateChange', handleAppStateChange);
-    }
-
-    return () => {
+      // Set up event listener for app ready
       if (Capacitor.isPluginAvailable('App')) {
-        App.removeAllListeners();
+        App.addListener('appStateChange', handleAppStateChange);
       }
-    };
+
+      return () => {
+        if (Capacitor.isPluginAvailable('App')) {
+          App.removeAllListeners();
+        }
+      };
+    }
   }, []);
 
   return <>{children}</>;
