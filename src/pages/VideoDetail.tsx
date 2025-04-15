@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
@@ -24,9 +25,9 @@ const VideoDetail = () => {
       onError: (err: any) => {
         console.error("Error fetching video from Supabase:", err);
         toast({
-          title: "Error loading video",
-          description: "Could not load the video from the server. Checking local storage...",
-          variant: "destructive"
+          title: "Falling back to local videos",
+          description: "Could not load from server. Checking local storage...",
+          variant: "default"
         });
       }
     }
@@ -65,11 +66,15 @@ const VideoDetail = () => {
             setLocalVideo(video);
           } else {
             console.log("No local video found with ID:", numId);
+            
+            // If not found by ID, try to find all videos and debug
+            const allVideos = await db.videoResources.toArray();
+            console.log("All local videos:", allVideos);
           }
         } else {
           // If it's not a number, try finding by videoUrl (for Supabase videos saved locally)
           const allVideos = await db.videoResources.toArray();
-          console.log("Searching through all local videos:", allVideos.length);
+          console.log("All local videos:", allVideos);
           
           const matchingVideo = allVideos.find(v => 
             v.videoUrl && (
@@ -141,6 +146,7 @@ const VideoDetail = () => {
   const categories = supabaseVideo ? supabaseVideo.skill_categories : video.skillCategory;
 
   console.log("Rendering VideoPlayer with URL:", videoUrl);
+  console.log("Full video object:", video);
 
   return (
     <MobileLayout>

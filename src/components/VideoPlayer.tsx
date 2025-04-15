@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useVideoPlayer } from '@/hooks/use-video-player';
 import VideoControls from './video/VideoControls';
 import VideoMetadata from './video/VideoMetadata';
 import { isYoutubeUrl, extractYoutubeVideoId } from '@/services/videoService';
+import { toast } from '@/hooks/use-toast';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -22,6 +23,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   categories 
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
+  
   const {
     isPlaying,
     isMuted,
@@ -44,6 +47,39 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const isYouTube = isYoutubeUrl(videoUrl);
   const youtubeVideoId = isYouTube ? extractYoutubeVideoId(videoUrl) : null;
 
+  // Log video details for debugging
+  useEffect(() => {
+    console.log('VideoPlayer mounted with URL:', videoUrl);
+    console.log('Is YouTube:', isYouTube);
+    console.log('YouTube Video ID:', youtubeVideoId);
+    console.log('Title:', title);
+    
+    if (!isYouTube) {
+      // Check if the URL starts with a slash and is not absolute
+      if (videoUrl.startsWith('/') && !videoUrl.startsWith('//') && !videoUrl.match(/^\/[a-z]+:/i)) {
+        // For local video files, make sure the path is correct
+        console.log('Local video file detected');
+        
+        // Create an Image object to test if the path is accessible
+        const img = new Image();
+        img.onload = () => console.log('Path seems accessible (thumbnail test)');
+        img.onerror = () => console.log('Path might not be accessible (thumbnail test failed)');
+        
+        if (categories && categories.length > 0) {
+          // Try to load a thumbnail using the same path pattern
+          const category = categories[0].toLowerCase().replace(/-/g, '');
+          img.src = `/videos/thumbnails/${category}.jpg`;
+        }
+      } else {
+        console.log('External video file or absolute URL detected');
+      }
+    }
+
+    return () => {
+      console.log('VideoPlayer unmounting');
+    };
+  }, [videoUrl, isYouTube, youtubeVideoId, title, categories]);
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       setCurrentTime(videoRef.current.currentTime);
@@ -60,12 +96,31 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     console.error("Video failed to load:", e);
-    setError("Failed to load video. Please check your connection or try a different video.");
+    const videoElem = e.currentTarget;
+    const errorMsg = `Failed to load video. Error code: ${videoElem.error?.code || 'unknown'}`;
+    
+    setVideoError(errorMsg);
+    setError(errorMsg);
     setIsLoading(false);
+    
+    // Log details about the video element
+    console.error("Video error details:", {
+      src: videoElem.currentSrc || videoElem.src,
+      readyState: videoElem.readyState,
+      networkState: videoElem.networkState,
+      error: videoElem.error
+    });
+    
+    toast({
+      title: "Video playback error",
+      description: "There was a problem loading the video. Check console for details.",
+      variant: "destructive"
+    });
   };
 
   const retryLoading = () => {
     setError(null);
+    setVideoError(null);
     setIsLoading(true);
     if (videoRef.current) {
       videoRef.current.load();
@@ -88,10 +143,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           </div>
         )}
 
-        {error && !isYouTube && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+        {(error || videoError) && !isYouTube && (
+          <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center z-10">
             <div className="text-white text-center p-4">
-              <p className="mb-2">{error}</p>
+              <p className="mb-2">{error || videoError}</p>
+              <div className="mb-2">
+                <p className="text-xs opacity-70">Video URL: {videoUrl}</p>
+              </div>
               <Button 
                 variant="outline" 
                 onClick={retryLoading}

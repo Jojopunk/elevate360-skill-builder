@@ -26,15 +26,29 @@ const Videos = () => {
     const loadLocalVideos = async () => {
       try {
         const allVideos = await db.videoResources.toArray();
+        console.log("Local videos loaded:", allVideos);
+        
+        // Check if local videos have valid paths
+        allVideos.forEach(video => {
+          console.log(`Video ${video.id}: ${video.title}`);
+          console.log(`- Path: ${video.videoUrl}`);
+          console.log(`- Thumbnail: ${video.thumbnailUrl}`);
+        });
+        
         setLocalVideos(allVideos);
         setDownloadedVideos(allVideos.filter(v => v.isDownloaded));
       } catch (error) {
         console.error('Error loading local videos:', error);
+        toast({
+          title: "Error loading videos",
+          description: "There was a problem loading your local videos",
+          variant: "destructive"
+        });
       }
     };
 
     loadLocalVideos();
-  }, []);
+  }, [toast]);
 
   const handleDownload = async (video: SupabaseVideo) => {
     try {
@@ -90,6 +104,14 @@ const Videos = () => {
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
 
+  // Log state for debugging
+  useEffect(() => {
+    console.log("Videos component state:");
+    console.log("- Local videos:", localVideos.length);
+    console.log("- Downloaded videos:", downloadedVideos.length);
+    console.log("- Supabase videos:", supabaseVideos?.length || 0);
+  }, [localVideos, downloadedVideos, supabaseVideos]);
+
   const filteredSupabaseVideos = supabaseVideos?.filter(video => 
     video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -108,7 +130,7 @@ const Videos = () => {
 
         <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
-        <Tabs defaultValue="all" className="w-full">
+        <Tabs defaultValue="downloaded" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="all">All Videos</TabsTrigger>
             <TabsTrigger value="downloaded">Downloaded</TabsTrigger>
