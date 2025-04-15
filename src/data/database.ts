@@ -1,3 +1,4 @@
+
 import Dexie, { Table } from 'dexie';
 
 export interface User {
@@ -196,33 +197,47 @@ export async function seedDatabaseWithInitialData() {
       try {
         await db.videoResources.bulkAdd([
           {
-            title: "Introduction to Web Development",
-            description: "Learn the basics of HTML, CSS and JavaScript",
-            videoUrl: "https://www.youtube.com/watch?v=UB1O30fR-EE",
-            thumbnailUrl: "https://img.youtube.com/vi/UB1O30fR-EE/hqdefault.jpg",
-            duration: 600, // 10 minutes
-            skillCategory: ["web-development", "technical-skills"],
-            isDownloaded: false,
+            title: "Communication Skills Masterclass",
+            description: "Learn effective communication techniques for professional success",
+            videoUrl: "/videos/communication-skills.mp4",
+            thumbnailUrl: "/videos/thumbnails/communication.jpg",
+            duration: 360, // 6 minutes
+            skillCategory: ["communication", "professional-development"],
+            isDownloaded: true,
+            localFilePath: "/videos/communication-skills.mp4",
             createdAt: new Date()
           },
           {
-            title: "Effective Communication Skills",
-            description: "Master the art of clear and impactful communication",
-            videoUrl: "https://www.youtube.com/watch?v=JwjAAgGi-90",
-            thumbnailUrl: "https://img.youtube.com/vi/JwjAAgGi-90/hqdefault.jpg",
+            title: "Team Leadership Essentials",
+            description: "Master the fundamentals of leading high-performing teams",
+            videoUrl: "/videos/leadership.mp4",
+            thumbnailUrl: "/videos/thumbnails/leadership.jpg",
             duration: 480, // 8 minutes
-            skillCategory: ["communication", "soft-skills"],
-            isDownloaded: false,
+            skillCategory: ["leadership", "management"],
+            isDownloaded: true,
+            localFilePath: "/videos/leadership.mp4",
             createdAt: new Date()
           },
           {
-            title: "Time Management Tips",
-            description: "Learn how to manage your time effectively",
-            videoUrl: "https://www.youtube.com/watch?v=iONDebHX9qk",
-            thumbnailUrl: "https://img.youtube.com/vi/iONDebHX9qk/hqdefault.jpg",
+            title: "Problem Solving Workshop",
+            description: "Develop critical thinking and problem-solving abilities",
+            videoUrl: "/videos/problem-solving.mp4",
+            thumbnailUrl: "/videos/thumbnails/problem-solving.jpg",
             duration: 420, // 7 minutes
+            skillCategory: ["critical-thinking", "problem-solving"],
+            isDownloaded: true,
+            localFilePath: "/videos/problem-solving.mp4",
+            createdAt: new Date()
+          },
+          {
+            title: "Time Management Strategies",
+            description: "Learn effective time management and productivity techniques",
+            videoUrl: "/videos/time-management.mp4",
+            thumbnailUrl: "/videos/thumbnails/time-management.jpg",
+            duration: 300, // 5 minutes
             skillCategory: ["productivity", "self-management"],
-            isDownloaded: false,
+            isDownloaded: true,
+            localFilePath: "/videos/time-management.mp4",
             createdAt: new Date()
           }
         ]);
