@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { VideoResource } from "@/data/database";
 import db from "@/data/database";
@@ -27,6 +26,7 @@ export function extractYoutubeVideoId(url: string): string | null {
   const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
   const match = url.match(regex);
   
+  console.log("YouTube URL parsing:", { url, match: match ? match[1] : null });
   return match ? match[1] : null;
 }
 
@@ -37,7 +37,9 @@ export function getYoutubeThumbnailUrl(videoId: string): string {
 
 // Check if a URL is a YouTube video URL
 export function isYoutubeUrl(url: string): boolean {
-  return url.includes("youtube.com") || url.includes("youtu.be");
+  const isYT = url.includes("youtube.com") || url.includes("youtu.be");
+  console.log(`Checking if ${url} is a YouTube URL:`, isYT);
+  return isYT;
 }
 
 export async function fetchSupabaseVideos(): Promise<SupabaseVideo[]> {
