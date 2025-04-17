@@ -332,8 +332,7 @@ const Progress = () => {
                           value={skill.percentage} 
                           className="h-2"
                           style={{ 
-                            backgroundColor: '#E5DEFF',
-                            '--tw-bg-opacity': 1,
+                            backgroundColor: '#E5DEFF'
                           }}
                         />
                       </div>
