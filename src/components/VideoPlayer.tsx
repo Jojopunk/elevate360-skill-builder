@@ -47,16 +47,31 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const isYouTube = isYoutubeUrl(videoUrl);
   const youtubeVideoId = isYouTube ? extractYoutubeVideoId(videoUrl) : null;
 
+  // Adjust videoUrl path for local videos
+  const adjustedVideoUrl = useMemo(() => {
+    if (isYouTube || videoUrl.startsWith('http')) {
+      return videoUrl;
+    }
+    
+    // If it's a relative path that starts with /skill_videos, fix it
+    if (videoUrl.startsWith('/skill_videos/')) {
+      return videoUrl.replace('/skill_videos/', '/videos/');
+    }
+    
+    return videoUrl;
+  }, [videoUrl, isYouTube]);
+
   // Log video details for debugging
   useEffect(() => {
     console.log('VideoPlayer mounted with URL:', videoUrl);
+    console.log('Adjusted URL:', adjustedVideoUrl);
     console.log('Is YouTube:', isYouTube);
     console.log('YouTube Video ID:', youtubeVideoId);
     console.log('Title:', title);
     
     if (!isYouTube) {
       // Check if the URL starts with a slash and is not absolute
-      if (videoUrl.startsWith('/') && !videoUrl.startsWith('//') && !videoUrl.match(/^\/[a-z]+:/i)) {
+      if (adjustedVideoUrl.startsWith('/') && !adjustedVideoUrl.startsWith('//') && !adjustedVideoUrl.match(/^\/[a-z]+:/i)) {
         // For local video files, make sure the path is correct
         console.log('Local video file detected');
         
@@ -78,7 +93,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     return () => {
       console.log('VideoPlayer unmounting');
     };
-  }, [videoUrl, isYouTube, youtubeVideoId, title, categories]);
+  }, [videoUrl, adjustedVideoUrl, isYouTube, youtubeVideoId, title, categories]);
 
   const handleTimeUpdate = () => {
     if (videoRef.current) {
@@ -148,7 +163,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
             <div className="text-white text-center p-4">
               <p className="mb-2">{error || videoError}</p>
               <div className="mb-2">
-                <p className="text-xs opacity-70">Video URL: {videoUrl}</p>
+                <p className="text-xs opacity-70">Video URL: {adjustedVideoUrl}</p>
               </div>
               <Button 
                 variant="outline" 
@@ -185,7 +200,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
               preload="metadata"
               playsInline
             >
-              <source src={videoUrl} type="video/mp4" />
+              <source src={adjustedVideoUrl} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
 

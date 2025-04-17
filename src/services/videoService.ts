@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { VideoResource } from "@/data/database";
 import db from "@/data/database";
@@ -42,6 +43,20 @@ export function isYoutubeUrl(url: string): boolean {
   return isYT;
 }
 
+// Fix Supabase video URL paths
+export function fixVideoUrl(url: string): string {
+  if (isYoutubeUrl(url) || url.startsWith('http')) {
+    return url;
+  }
+  
+  // If the URL starts with /skill_videos, adjust it to /videos
+  if (url.startsWith('/skill_videos/')) {
+    return url.replace('/skill_videos/', '/videos/');
+  }
+  
+  return url;
+}
+
 export async function fetchSupabaseVideos(): Promise<SupabaseVideo[]> {
   console.log("Fetching videos from Supabase");
   
@@ -68,7 +83,14 @@ export async function fetchSupabaseVideos(): Promise<SupabaseVideo[]> {
       return getFallbackVideos();
     }
     
-    return data;
+    // Fix video URLs
+    const fixedData = data.map(video => ({
+      ...video,
+      video_url: fixVideoUrl(video.video_url),
+      thumbnail_url: video.thumbnail_url ? fixVideoUrl(video.thumbnail_url) : null
+    }));
+    
+    return fixedData;
   } catch (error) {
     console.error("Exception in fetchSupabaseVideos:", error);
     toast({
@@ -96,6 +118,14 @@ export async function fetchSupabaseVideoById(id: string): Promise<SupabaseVideo 
     }
 
     console.log("Video fetch result:", data);
+    
+    // Fix video URLs if found
+    if (data) {
+      data.video_url = fixVideoUrl(data.video_url);
+      if (data.thumbnail_url) {
+        data.thumbnail_url = fixVideoUrl(data.thumbnail_url);
+      }
+    }
     
     // If not found in Supabase, check local videos
     if (!data) {
@@ -240,8 +270,8 @@ function getFallbackVideos(): SupabaseVideo[] {
       id: "1",
       title: "Effective Communication (Offline)",
       description: "Learn how to communicate clearly and confidently in any situation",
-      video_url: "/sample-videos/effective_communication.mp4",
-      thumbnail_url: "/sample-videos/thumbnails/effective_communication.jpg",
+      video_url: "/videos/effective_communication.mp4",
+      thumbnail_url: "/videos/thumbnails/effective_communication.jpg",
       duration: 720,
       skill_categories: ["communication", "leadership"],
       created_at: new Date().toISOString(),
@@ -251,8 +281,8 @@ function getFallbackVideos(): SupabaseVideo[] {
       id: "2",
       title: "Time Management Mastery (Offline)",
       description: "Strategies to manage your time efficiently and boost productivity",
-      video_url: "/sample-videos/time_management.mp4",
-      thumbnail_url: "/sample-videos/thumbnails/time_management.jpg", 
+      video_url: "/videos/time_management.mp4",
+      thumbnail_url: "/videos/thumbnails/time_management.jpg", 
       duration: 540,
       skill_categories: ["productivity", "self-management"],
       created_at: new Date().toISOString(),
@@ -262,8 +292,8 @@ function getFallbackVideos(): SupabaseVideo[] {
       id: "3",
       title: "Conflict Resolution (Offline)",
       description: "How to resolve workplace conflicts professionally",
-      video_url: "/sample-videos/conflict_resolution.mp4",
-      thumbnail_url: "/sample-videos/thumbnails/conflict_resolution.jpg",
+      video_url: "/videos/conflict_resolution.mp4",
+      thumbnail_url: "/videos/thumbnails/conflict_resolution.jpg",
       duration: 630,
       skill_categories: ["communication", "teamwork", "leadership"],
       created_at: new Date().toISOString(),
