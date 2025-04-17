@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import MobileLayout from '@/components/layouts/MobileLayout';
 import { useAuth } from '@/context/AuthContext';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Trophy, Calendar, CheckCircle2, BarChart2, AlertTriangle, BookOpen } from 'lucide-react';
 import db from '@/data/database';
-import { Progress } from '@/components/ui/progress';
+import { Progress as ProgressBar } from '@/components/ui/progress';
 import { 
   ChartContainer, 
   ChartTooltip, 
@@ -168,7 +167,6 @@ const Progress = () => {
     loadData();
   }, [currentUser]);
 
-  // Helper function to format category names
   const formatCategoryName = (category: string): string => {
     return category.replace(/-/g, ' ')
       .split(' ')
@@ -176,7 +174,6 @@ const Progress = () => {
       .join(' ');
   };
 
-  // Prepare data for chart
   const chartData = skillProgress.map(skill => ({
     name: formatCategoryName(skill.category),
     value: skill.percentage,
@@ -203,7 +200,7 @@ const Progress = () => {
               <span className="text-sm font-medium">Mastery</span>
               <span className="text-sm font-medium">{overallProgress}%</span>
             </div>
-            <Progress value={overallProgress} className="h-2 bg-gray-200" />
+            <ProgressBar value={overallProgress} className="h-2 bg-gray-200" />
           </CardContent>
         </Card>
 
@@ -331,10 +328,9 @@ const Progress = () => {
                           <span className="text-sm font-medium">Mastery</span>
                           <span className="text-sm font-medium">{skill.percentage}%</span>
                         </div>
-                        <Progress 
+                        <ProgressBar 
                           value={skill.percentage} 
                           className="h-2"
-                          // Color based on percentage
                           style={{ 
                             backgroundColor: '#E5DEFF',
                             '--tw-bg-opacity': 1,
