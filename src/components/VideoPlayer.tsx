@@ -44,8 +44,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   } = useVideoPlayer(videoRef);
 
   // Check if this is a YouTube video
-  const isYouTube = isYoutubeUrl(videoUrl);
-  const youtubeVideoId = isYouTube ? extractYoutubeVideoId(videoUrl) : null;
+  const isYouTube = useMemo(() => isYoutubeUrl(videoUrl), [videoUrl]);
+  const youtubeVideoId = useMemo(() => isYouTube ? extractYoutubeVideoId(videoUrl) : null, [isYouTube, videoUrl]);
 
   // Adjust videoUrl path for local videos
   const adjustedVideoUrl = useMemo(() => {

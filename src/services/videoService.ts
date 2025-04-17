@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { VideoResource } from "@/data/database";
 import db from "@/data/database";
@@ -307,6 +306,39 @@ function getFallbackVideos(): SupabaseVideo[] {
       thumbnail_url: getYoutubeThumbnailUrl("QGHBq5OEsBM"),
       duration: 600,
       skill_categories: ["coding", "web-development"],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: "5",
+      title: "UX/UI Design Principles",
+      description: "Learn essential design principles for creating great user experiences",
+      video_url: "https://www.youtube.com/watch?v=I6IAhXM-vps",
+      thumbnail_url: getYoutubeThumbnailUrl("I6IAhXM-vps"),
+      duration: 920,
+      skill_categories: ["design", "ux-ui"],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: "6",
+      title: "Digital Marketing Fundamentals",
+      description: "Comprehensive guide to digital marketing strategies and implementation",
+      video_url: "https://www.youtube.com/watch?v=xgp6eELYY1M",
+      thumbnail_url: getYoutubeThumbnailUrl("xgp6eELYY1M"),
+      duration: 1150,
+      skill_categories: ["marketing", "digital-skills"],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    {
+      id: "7",
+      title: "Data Analysis for Beginners",
+      description: "Introduction to data analysis techniques and tools for business insights",
+      video_url: "https://www.youtube.com/watch?v=KY5TWVz5ZDU",
+      thumbnail_url: getYoutubeThumbnailUrl("KY5TWVz5ZDU"),
+      duration: 845,
+      skill_categories: ["data-analysis", "business-skills"],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
