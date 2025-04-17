@@ -4,7 +4,7 @@ import MobileLayout from '@/components/layouts/MobileLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import db, { VideoResource } from '@/data/database';
-import { fetchSupabaseVideos, SupabaseVideo } from '@/services/videoService';
+import { fetchSupabaseVideos, SupabaseVideo, getFallbackVideos } from '@/services/videoService';
 import { useQuery } from '@tanstack/react-query';
 import SearchBar from '@/components/videos/SearchBar';
 import VideosList from '@/components/videos/VideosList';
@@ -20,6 +20,9 @@ const Videos = () => {
     queryKey: ['videos'],
     queryFn: fetchSupabaseVideos
   });
+
+  // For fallbacks when Supabase fails
+  const [fallbackVideos, setFallbackVideos] = useState<SupabaseVideo[]>([]);
 
   // Fetch locally stored videos
   useEffect(() => {
@@ -48,6 +51,9 @@ const Videos = () => {
     };
 
     loadLocalVideos();
+    
+    // Load fallback videos in case Supabase fails
+    setFallbackVideos(getFallbackVideos());
   }, [toast]);
 
   const handleDownload = async (video: SupabaseVideo) => {
@@ -110,9 +116,15 @@ const Videos = () => {
     console.log("- Local videos:", localVideos.length);
     console.log("- Downloaded videos:", downloadedVideos.length);
     console.log("- Supabase videos:", supabaseVideos?.length || 0);
-  }, [localVideos, downloadedVideos, supabaseVideos]);
+    console.log("- Fallback videos:", fallbackVideos.length);
+  }, [localVideos, downloadedVideos, supabaseVideos, fallbackVideos]);
 
-  const filteredSupabaseVideos = supabaseVideos?.filter(video => 
+  // Use fallback videos if Supabase fails or returns empty
+  const availableVideos = (supabaseVideos && supabaseVideos.length > 0) 
+    ? supabaseVideos 
+    : fallbackVideos;
+
+  const filteredVideos = availableVideos.filter(video => 
     video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     video.skill_categories.some(cat => 
@@ -130,7 +142,7 @@ const Videos = () => {
 
         <SearchBar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
-        <Tabs defaultValue="downloaded" className="w-full">
+        <Tabs defaultValue="all" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4">
             <TabsTrigger value="all">All Videos</TabsTrigger>
             <TabsTrigger value="downloaded">Downloaded</TabsTrigger>
@@ -138,9 +150,9 @@ const Videos = () => {
           
           <TabsContent value="all">
             <VideosList 
-              isLoadingSupabase={isLoadingSupabase}
-              supabaseError={supabaseError}
-              filteredVideos={filteredSupabaseVideos || []}
+              isLoadingSupabase={isLoadingSupabase && fallbackVideos.length === 0}
+              supabaseError={supabaseError && fallbackVideos.length === 0}
+              filteredVideos={filteredVideos}
               localVideos={localVideos}
               handleDownload={handleDownload}
               formatDuration={formatDuration}

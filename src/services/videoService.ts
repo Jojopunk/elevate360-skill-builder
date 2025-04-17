@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { VideoResource } from "@/data/database";
 import db from "@/data/database";
@@ -263,7 +264,8 @@ export async function addYoutubeVideoToSupabase(youtubeUrl: string, title: strin
 }
 
 // Provide fallback videos when Supabase is unavailable
-function getFallbackVideos(): SupabaseVideo[] {
+export function getFallbackVideos(): SupabaseVideo[] {
+  console.log("Using fallback videos");
   const fallbackVideos = [
     {
       id: "1",
