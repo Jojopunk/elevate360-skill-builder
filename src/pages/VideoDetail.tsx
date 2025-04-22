@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import MobileLayout from '@/components/layouts/MobileLayout';
 import VideoPlayer from '@/components/VideoPlayer';
 import { Button } from '@/components/ui/button';
-import { fetchSupabaseVideoById } from '@/services/videoService';
+import { fetchSupabaseVideoById, getFallbackVideos } from '@/services/videoService';
 import { useQuery } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
 import db from '@/data/database';
@@ -15,11 +15,14 @@ const VideoDetail = () => {
   const navigate = useNavigate();
   const [localVideo, setLocalVideo] = useState<any>(null);
 
-  // First try to get the video from Supabase
+  // Check if the ID starts with "yt-" which indicates it's a YouTube video from fallback
+  const isYouTubeVideo = id?.startsWith('yt-');
+
+  // First try to get the video from Supabase, but skip for YouTube fallback videos
   const { data: supabaseVideo, isLoading: isLoadingSupabase, error } = useQuery({
     queryKey: ['video', id],
     queryFn: () => fetchSupabaseVideoById(id!),
-    enabled: !!id,
+    enabled: !!id && !isYouTubeVideo, // Don't query Supabase for YouTube fallback videos
     retry: 1, // Only retry once to avoid multiple fallbacks to local
     meta: {
       onError: (err: any) => {
@@ -33,23 +36,37 @@ const VideoDetail = () => {
     }
   });
 
+  // For YouTube videos, get them directly from the fallback list
+  const [fallbackVideo, setFallbackVideo] = useState<any>(null);
+
+  useEffect(() => {
+    if (isYouTubeVideo) {
+      const fallbackVideos = getFallbackVideos();
+      const video = fallbackVideos.find(v => v.id === id);
+      if (video) {
+        console.log("Found YouTube video in fallbacks:", video);
+        setFallbackVideo(video);
+      } else {
+        console.error("YouTube video not found in fallbacks:", id);
+      }
+    }
+  }, [id, isYouTubeVideo]);
+
   // Log debugging information
   useEffect(() => {
     console.log("Video Detail Page - ID:", id);
+    console.log("Is YouTube video:", isYouTubeVideo);
     console.log("Supabase video:", supabaseVideo);
+    console.log("Fallback video:", fallbackVideo);
     console.log("Local video:", localVideo);
     console.log("Is loading from Supabase:", isLoadingSupabase);
-    
-    if (supabaseVideo) {
-      console.log("Supabase video loaded successfully");
-    }
     
     if (error) {
       console.error("Detailed Supabase error:", error);
     }
-  }, [id, supabaseVideo, localVideo, isLoadingSupabase, error]);
+  }, [id, isYouTubeVideo, supabaseVideo, fallbackVideo, localVideo, isLoadingSupabase, error]);
 
-  // If not found in Supabase, try to get from local DB
+  // If not found in Supabase or as YouTube fallback, try to get from local DB
   useEffect(() => {
     const getLocalVideo = async () => {
       if (!id) return;
@@ -95,13 +112,14 @@ const VideoDetail = () => {
       }
     };
 
-    if (!supabaseVideo && !isLoadingSupabase) {
+    if (!supabaseVideo && !isLoadingSupabase && !fallbackVideo) {
       getLocalVideo();
     }
-  }, [id, supabaseVideo, isLoadingSupabase]);
+  }, [id, supabaseVideo, isLoadingSupabase, fallbackVideo]);
 
-  const video = supabaseVideo || localVideo;
-  const isLoading = isLoadingSupabase && !localVideo;
+  // Determine which video to use (fallback, supabase, or local)
+  const video = fallbackVideo || supabaseVideo || localVideo;
+  const isLoading = (isLoadingSupabase && !isYouTubeVideo && !localVideo && !fallbackVideo);
 
   if (isLoading) {
     return (
@@ -139,11 +157,11 @@ const VideoDetail = () => {
     );
   }
 
-  // Handle different property structures between Supabase and local DB
-  const videoUrl = supabaseVideo ? supabaseVideo.video_url : video.videoUrl;
+  // Handle different property structures between different video sources
+  const videoUrl = 'video_url' in video ? video.video_url : video.videoUrl;
   const title = video.title;
-  const description = supabaseVideo ? supabaseVideo.description : video.description;
-  const categories = supabaseVideo ? supabaseVideo.skill_categories : video.skillCategory;
+  const description = 'description' in video ? video.description : video.description;
+  const categories = 'skill_categories' in video ? video.skill_categories : video.skillCategory;
 
   console.log("Rendering VideoPlayer with URL:", videoUrl);
   console.log("Full video object:", video);

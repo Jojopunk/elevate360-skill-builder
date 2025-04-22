@@ -104,6 +104,12 @@ export async function fetchSupabaseVideos(): Promise<SupabaseVideo[]> {
 export async function fetchSupabaseVideoById(id: string): Promise<SupabaseVideo | null> {
   console.log("Fetching video from Supabase with ID:", id);
   
+  // Don't try to fetch YouTube fallback videos from Supabase
+  if (id.startsWith('yt-')) {
+    console.log("This is a YouTube fallback video ID, not querying Supabase");
+    return null;
+  }
+  
   try {
     const { data, error } = await supabase
       .from('video_resources')
