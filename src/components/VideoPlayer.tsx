@@ -181,7 +181,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <div className="aspect-video w-full">
             <iframe
               className="w-full h-full"
-              src={`https://www.youtube.com/embed/${youtubeVideoId}`}
+              src={`https://www.youtube.com/embed/${youtubeVideoId}?autoplay=1`}
               title={title}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen

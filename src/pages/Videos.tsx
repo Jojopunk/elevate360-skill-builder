@@ -15,14 +15,14 @@ const Videos = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
 
+  // Get fallback videos (including YouTube videos)
+  const fallbackVideos = getFallbackVideos();
+
   // Fetch videos from Supabase
   const { data: supabaseVideos, isLoading: isLoadingSupabase, error: supabaseError } = useQuery({
     queryKey: ['videos'],
     queryFn: fetchSupabaseVideos
   });
-
-  // For fallbacks when Supabase fails
-  const [fallbackVideos, setFallbackVideos] = useState<SupabaseVideo[]>([]);
 
   // Fetch locally stored videos
   useEffect(() => {
@@ -51,9 +51,6 @@ const Videos = () => {
     };
 
     loadLocalVideos();
-    
-    // Load fallback videos in case Supabase fails
-    setFallbackVideos(getFallbackVideos());
   }, [toast]);
 
   const handleDownload = async (video: SupabaseVideo) => {
@@ -119,12 +116,21 @@ const Videos = () => {
     console.log("- Fallback videos:", fallbackVideos.length);
   }, [localVideos, downloadedVideos, supabaseVideos, fallbackVideos]);
 
-  // Use fallback videos if Supabase fails or returns empty
-  const availableVideos = (supabaseVideos && supabaseVideos.length > 0) 
-    ? supabaseVideos 
-    : fallbackVideos;
+  // Combine Supabase videos and YouTube videos to always show both
+  const combinedVideos = [...(supabaseVideos || []), ...fallbackVideos];
+  
+  // Remove duplicates (in case fallback videos are also in supabaseVideos)
+  const uniqueVideos = combinedVideos.reduce((acc: SupabaseVideo[], current) => {
+    const x = acc.find(item => item.video_url === current.video_url);
+    if (!x) {
+      return acc.concat([current]);
+    } else {
+      return acc;
+    }
+  }, []);
 
-  const filteredVideos = availableVideos.filter(video => 
+  // Filter the combined list based on search query
+  const filteredVideos = uniqueVideos.filter(video => 
     video.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     video.skill_categories.some(cat => 
@@ -150,8 +156,8 @@ const Videos = () => {
           
           <TabsContent value="all">
             <VideosList 
-              isLoadingSupabase={isLoadingSupabase && fallbackVideos.length === 0}
-              supabaseError={supabaseError && fallbackVideos.length === 0}
+              isLoadingSupabase={isLoadingSupabase && filteredVideos.length === 0}
+              supabaseError={supabaseError && filteredVideos.length === 0}
               filteredVideos={filteredVideos}
               localVideos={localVideos}
               handleDownload={handleDownload}

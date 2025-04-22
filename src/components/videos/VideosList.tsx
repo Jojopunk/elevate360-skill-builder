@@ -2,7 +2,7 @@
 import React from 'react';
 import { VideoIcon, Download } from 'lucide-react';
 import VideoCard from './VideoCard';
-import { SupabaseVideo } from '@/services/videoService';
+import { SupabaseVideo, isYoutubeUrl } from '@/services/videoService';
 import { VideoResource } from '@/data/database';
 import { Link } from 'react-router-dom';
 
@@ -29,7 +29,7 @@ const VideosList: React.FC<VideosListProps> = ({
     return <p className="text-center py-8 text-gray-600">Loading videos...</p>;
   }
   
-  if (supabaseError && !isDownloadedTab) {
+  if (supabaseError && !isDownloadedTab && filteredVideos.length === 0) {
     return (
       <div className="text-center py-8">
         <p className="text-red-500">Failed to load videos</p>
@@ -63,7 +63,7 @@ const VideosList: React.FC<VideosListProps> = ({
   }
   
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {filteredVideos.map((video, index) => {
         // Determine if this is a Supabase video by checking for video_url property
         const isSupabaseVideo = 'video_url' in video;
@@ -78,6 +78,11 @@ const VideosList: React.FC<VideosListProps> = ({
           ? (video as SupabaseVideo).id 
           : (video as VideoResource).id;
         
+        // Get video URL to check if it's YouTube
+        const videoUrl = isSupabaseVideo 
+          ? (video as SupabaseVideo).video_url 
+          : (video as VideoResource).videoUrl;
+        
         return (
           <Link 
             to={`/videos/${videoId}`} 
@@ -89,7 +94,7 @@ const VideosList: React.FC<VideosListProps> = ({
               isDownloaded={isDownloaded}
               onDownload={(e) => {
                 e.preventDefault(); // Prevent navigation when clicking download
-                if (isSupabaseVideo) handleDownload(video as SupabaseVideo);
+                if (isSupabaseVideo && !isYoutubeUrl(videoUrl)) handleDownload(video as SupabaseVideo);
               }}
               formatDuration={formatDuration}
               isSupabaseVideo={isSupabaseVideo}

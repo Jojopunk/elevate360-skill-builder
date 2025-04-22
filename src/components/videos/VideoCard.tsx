@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Video as VideoIcon, Download, CheckCircle } from 'lucide-react';
-import { SupabaseVideo } from '@/services/videoService';
+import { SupabaseVideo, isYoutubeUrl } from '@/services/videoService';
 import { VideoResource } from '@/data/database';
 
 interface VideoCardProps {
@@ -39,6 +39,12 @@ const VideoCard: React.FC<VideoCardProps> = ({
     ? (video as SupabaseVideo).thumbnail_url
     : (video as VideoResource).thumbnailUrl;
 
+  // Check if this is a YouTube video
+  const videoUrl = isSupabaseVideo
+    ? (video as SupabaseVideo).video_url
+    : (video as VideoResource).videoUrl;
+  const isYouTube = isYoutubeUrl(videoUrl);
+
   return (
     <Card className="card-shadow hover:shadow-lg transition-shadow">
       <div className="relative">
@@ -71,6 +77,11 @@ const VideoCard: React.FC<VideoCardProps> = ({
             Offline
           </div>
         )}
+        {isYouTube && (
+          <div className="absolute top-2 left-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+            YouTube
+          </div>
+        )}
       </div>
       <CardHeader className="p-4 pb-2">
         <CardTitle className="text-lg">{title}</CardTitle>
@@ -87,7 +98,7 @@ const VideoCard: React.FC<VideoCardProps> = ({
           ))}
         </div>
         
-        {isSupabaseVideo && (
+        {isSupabaseVideo && !isYouTube && (
           isDownloaded ? (
             <Button 
               variant="secondary" 
