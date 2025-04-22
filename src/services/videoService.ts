@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { VideoResource } from "@/data/database";
 import db from "@/data/database";
@@ -301,7 +300,7 @@ export function getFallbackVideos(): SupabaseVideo[] {
       updated_at: new Date().toISOString()
     },
     {
-      id: "4",
+      id: "yt-web-dev",
       title: "Introduction to Web Development",
       description: "Learn the basics of HTML, CSS and JavaScript",
       video_url: "https://www.youtube.com/watch?v=QGHBq5OEsBM",
@@ -312,7 +311,7 @@ export function getFallbackVideos(): SupabaseVideo[] {
       updated_at: new Date().toISOString()
     },
     {
-      id: "5",
+      id: "yt-ux-ui",
       title: "UX/UI Design Principles",
       description: "Learn essential design principles for creating great user experiences",
       video_url: "https://www.youtube.com/watch?v=I6IAhXM-vps",
@@ -323,7 +322,7 @@ export function getFallbackVideos(): SupabaseVideo[] {
       updated_at: new Date().toISOString()
     },
     {
-      id: "6",
+      id: "yt-digital-marketing",
       title: "Digital Marketing Fundamentals",
       description: "Comprehensive guide to digital marketing strategies and implementation",
       video_url: "https://www.youtube.com/watch?v=xgp6eELYY1M",
@@ -334,7 +333,7 @@ export function getFallbackVideos(): SupabaseVideo[] {
       updated_at: new Date().toISOString()
     },
     {
-      id: "7",
+      id: "yt-data-analysis",
       title: "Data Analysis for Beginners",
       description: "Introduction to data analysis techniques and tools for business insights",
       video_url: "https://www.youtube.com/watch?v=KY5TWVz5ZDU",
